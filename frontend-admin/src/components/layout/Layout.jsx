@@ -78,19 +78,9 @@ export default function Layout() {
       </Drawer>
 
       {/* Main Content Area */}
-      <Box 
-        component="main" 
-        sx={{ 
-          flexGrow: 1, 
-          p: 3, 
-          backgroundColor: '#f1f5f9', 
-          height: '100vh', // Strictly lock to viewport
-          display: 'flex', 
-          flexDirection: 'column', 
-          overflow: 'hidden' // Kill any accidental overflow from the parent
-        }}
-      >
-        <Toolbar /> {/* Spacer pushes content below AppBar */}
+      {/* 2. Tell the main content area it can scroll vertically (overflowY: 'auto') */}
+      <Box component="main" sx={{ flexGrow: 1, p: 3, height: '100%', overflowY: 'auto' }}>
+        <Toolbar /> {/* Spacer */}
         <Outlet /> 
       </Box>
     </Box>
