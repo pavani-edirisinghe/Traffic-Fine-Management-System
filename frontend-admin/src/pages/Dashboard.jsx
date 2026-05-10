@@ -33,13 +33,16 @@ export default function Dashboard() {
   ];
 
   return (
-    <Box sx={{ flexGrow: 1 }}>
-      <Typography variant="h4" sx={{ mb: 4, fontWeight: 'bold' }}>
+    // 1. Lock the total height to the viewport (100vh) minus the Topbar and padding (~100px)
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 100px)' }}>
+      
+      {/* flexShrink: 0 prevents the browser from squishing the title or cards to make room for the table */}
+      <Typography variant="h4" sx={{ mb: 4, fontWeight: 'bold', flexShrink: 0 }}>
         Overview
       </Typography>
 
       {/* High-Level Metrics (KPI Cards) */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+      <Grid container spacing={3} sx={{ mb: 4, flexShrink: 0 }}>
         <Grid item xs={12} sm={4}>
           <Card elevation={3}>
             <CardContent>
@@ -67,12 +70,14 @@ export default function Dashboard() {
       </Grid>
 
       {/* Live Transaction Feed */}
-      <Typography variant="h6" sx={{ mb: 2 }}>Recent Transactions</Typography>
-      <Box sx={{ height: 400, width: '100%', backgroundColor: 'white' }}>
+      <Typography variant="h6" sx={{ mb: 2, flexShrink: 0 }}>Recent Transactions</Typography>
+      
+      {/* 2. flexGrow: 1 tells this wrapper to consume all remaining vertical space. minHeight: 0 prevents overflow bugs. */}
+      <Box sx={{ flexGrow: 1, width: '100%', backgroundColor: 'white', minHeight: 0 }}>
         <DataGrid
           rows={mockFines}
           columns={columns}
-          getRowId={(row) => row.referenceNumber} // Tells MUI to use your reference number as the unique ID
+          getRowId={(row) => row.referenceNumber}
           initialState={{
             pagination: { paginationModel: { pageSize: 5 } },
           }}
