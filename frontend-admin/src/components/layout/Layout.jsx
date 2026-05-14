@@ -12,9 +12,9 @@ export default function Layout() {
 
   // Define the navigation architecture
   const menuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
-    { text: 'Transactions', icon: <ReceiptLongIcon />, path: '/transactions' },
-    { text: 'Analytics', icon: <BarChartIcon />, path: '/analytics' },
+    { text: 'Dashboard', icon: <DashboardIcon />, path: '/admin' },
+    { text: 'Transactions', icon: <ReceiptLongIcon />, path: '/admin/transactions' },
+    { text: 'Analytics', icon: <BarChartIcon />, path: '/admin/analytics' },
   ];
 
   return (
