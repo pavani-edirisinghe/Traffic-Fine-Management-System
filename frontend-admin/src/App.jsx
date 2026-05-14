@@ -4,11 +4,24 @@ import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
 import Analytics from './pages/Analytics';
 import Login from './pages/Login';
+import Signup from './pages/Signup';
 import DriverPortal from './pages/DriverPortal';
 import OfficerPortal from './pages/OfficerPortal';
 import IssueTicket from './pages/IssueTicket';
 import Transactions from './pages/Transactions';
 import ManageOfficers from './pages/ManageOfficers';
+import { getAuth } from './services/auth';
+
+function RequireRole({ allowedRoles, children }) {
+  const auth = getAuth();
+  if (!auth?.accessToken || !auth?.role) {
+    return <Navigate to="/login" replace />;
+  }
+  if (!allowedRoles.includes(auth.role)) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
 
 export default function App() {
   return (
@@ -19,15 +32,32 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/driver" element={<DriverPortal />} />
-        <Route path="/officer" element={<OfficerPortal />} />
-        <Route path="/admin" element={<Layout />}>
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/driver" element={
+          <RequireRole allowedRoles={["DRIVER"]}>
+            <DriverPortal />
+          </RequireRole>
+        } />
+        <Route path="/officer" element={
+          <RequireRole allowedRoles={["OFFICER", "ADMIN"]}>
+            <OfficerPortal />
+          </RequireRole>
+        } />
+        <Route path="/admin" element={
+          <RequireRole allowedRoles={["ADMIN"]}>
+            <Layout />
+          </RequireRole>
+        }>
           <Route index element={<Dashboard />} />
           <Route path="analytics" element={<Analytics />} /> 
           <Route path="transactions" element={<Transactions />} />
           <Route path="officers" element={<ManageOfficers />} />
         </Route>
-        <Route path="/issue-ticket" element={<IssueTicket />} />
+        <Route path="/issue-ticket" element={
+          <RequireRole allowedRoles={["OFFICER", "ADMIN"]}>
+            <IssueTicket />
+          </RequireRole>
+        } />
       </Routes>
     </BrowserRouter>
   );

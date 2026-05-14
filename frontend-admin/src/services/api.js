@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getAccessToken } from './auth';
 
 // The base URL of Kavithma's Spring Boot server
 const API_BASE_URL = 'http://localhost:8080/api/v1'; 
@@ -10,6 +11,30 @@ const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+apiClient.interceptors.request.use((config) => {
+  const token = getAccessToken();
+  if (token) {
+    config.headers = config.headers || {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export const signup = async ({ username, password, role }) => {
+  const response = await apiClient.post('/auth/signup', { username, password, role });
+  return response.data;
+};
+
+export const login = async ({ username, password }) => {
+  const response = await apiClient.post('/auth/login', { username, password });
+  return response.data;
+};
+
+export const me = async () => {
+  const response = await apiClient.get('/auth/me');
+  return response.data;
+};
 
 // The function to fetch all fines for the Admin Dashboard
 export const getAllFines = async () => {

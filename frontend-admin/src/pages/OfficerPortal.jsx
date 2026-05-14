@@ -9,11 +9,12 @@ import LocalPoliceIcon from '@mui/icons-material/LocalPolice';
 import AddIcon from '@mui/icons-material/Add';
 import { useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { mockFines } from '../data/mockData';
+import { getOfficerProfile } from '../services/auth';
 
 export default function OfficerPortal() {
   const location = useLocation();
   const navigate = useNavigate();
-  const currentOfficer = location.state?.currentOfficer;
+  const currentOfficer = location.state?.currentOfficer || getOfficerProfile();
 
   // Manage fines in local state
   const [fines] = useState(mockFines);

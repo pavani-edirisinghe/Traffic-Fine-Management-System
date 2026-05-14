@@ -6,11 +6,12 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { mockFines } from '../data/mockData';
+import { getOfficerProfile } from '../services/auth';
 
 export default function IssueTicket() {
   const location = useLocation();
   const navigate = useNavigate();
-  const currentOfficer = location.state?.currentOfficer;
+  const currentOfficer = location.state?.currentOfficer || getOfficerProfile();
 
   const [newTicket, setNewTicket] = useState({ 
     categoryIdentifier: '', 
