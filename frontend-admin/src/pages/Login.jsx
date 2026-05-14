@@ -8,10 +8,9 @@ import {
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import EmailIcon from '@mui/icons-material/Email';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
-import CommuteIcon from '@mui/icons-material/Commute';
 import { mockOfficers } from '../data/mockData';
-import { login } from '../services/api';
-import { clearAuth, setAuth, setDriverContext, setOfficerProfile } from '../services/auth';
+import { login, me } from '../services/api';
+import { clearAuth, parseJwtPayload, setAuth, setDriverContext, setOfficerProfile } from '../services/auth';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -30,6 +29,29 @@ export default function Login() {
     setSubmitting(true);
     try {
       clearAuth();
+
+      if (isDriver) {
+        const token = input1.trim();
+        if (!token) {
+          alert('Please paste the access token given by the officer.');
+          return;
+        }
+
+        // Temporarily store token so api client can call /auth/me
+        setAuth({ accessToken: token, tokenType: 'Bearer', username: '', role: 'DRIVER', expiresInSeconds: 0 });
+        const profile = await me();
+        setAuth({ accessToken: token, tokenType: 'Bearer', username: profile.username, role: profile.role, expiresInSeconds: 0 });
+
+        const payload = parseJwtPayload(token);
+        const driverCtx = {
+          referenceNumber: payload?.referenceNumber,
+          categoryIdentifier: payload?.categoryIdentifier,
+        };
+        setDriverContext(driverCtx);
+        navigate('/driver', { state: driverCtx });
+        return;
+      }
+
       const data = await login({ username: input1, password: input2 });
       setAuth(data);
 
@@ -53,12 +75,11 @@ export default function Login() {
       }
 
       if (data.role === 'DRIVER') {
-        const driverCtx = { referenceNumber: input1, categoryIdentifier: input2 };
-        setDriverContext(driverCtx);
-        navigate('/driver', { state: driverCtx });
+        alert('Driver access uses an officer-issued token. Choose DRIVER role and paste the token.');
       }
     } catch (error) {
       console.error('Login failed:', error);
+      clearAuth();
       alert('Login failed. Check credentials and try again.');
     } finally {
       setSubmitting(false);
@@ -70,14 +91,6 @@ export default function Login() {
     setInput1('');
     setInput2('');
   };
-
-  // Pre-defined categories for the dropdown
-  const violationCategories = [
-    { id: 'SPEEDING_OVER_20', name: 'Speeding' },
-    { id: 'ILLEGAL_PARKING', name: 'Illegal Parking' },
-    { id: 'NO_LICENSE', name: 'Driving Without License' },
-    { id: 'RECKLESS_DRIVING', name: 'Reckless Driving' }
-  ];
 
   return (
     <Box sx={{ 
@@ -124,11 +137,11 @@ export default function Login() {
               </Select>
             </FormControl>
 
-            {/* DYNAMIC FIELD 1: Email */}
+            {/* FIELD 1 */}
             <TextField
               fullWidth
-              label={isDriver ? "Reference Number" : "Email Address"}
-              placeholder={isDriver ? "e.g., FIN-2026-8901" : "e.g., officer@police.lk"}
+              label={isDriver ? "Access Token" : "Email Address"}
+              placeholder={isDriver ? "Paste token from the officer" : "e.g., officer@police.lk"}
               variant="outlined"
               sx={{ mb: 3 }}
               required
@@ -143,32 +156,8 @@ export default function Login() {
               }}
             />
 
-            {/* DYNAMIC FIELD 2: Password (Text) OR Category (Dropdown) */}
-            {isDriver ? (
-              <TextField
-                select
-                fullWidth
-                label="Category Identifier"
-                variant="outlined"
-                sx={{ mb: 4 }}
-                required
-                value={input2}
-                onChange={(e) => setInput2(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <CommuteIcon color="action" />
-                    </InputAdornment>
-                  ),
-                }}
-              >
-                {violationCategories.map((cat) => (
-                  <MenuItem key={cat.id} value={cat.id}>
-                    {cat.name} ({cat.id})
-                  </MenuItem>
-                ))}
-              </TextField>
-            ) : (
+            {/* FIELD 2 */}
+            {!isDriver ? (
               <TextField
                 fullWidth
                 label="Password"
@@ -187,7 +176,7 @@ export default function Login() {
                   ),
                 }}
               />
-            )}
+            ) : null}
 
             <Button 
               type="submit" 
@@ -197,7 +186,7 @@ export default function Login() {
               disabled={submitting}
               sx={{ py: 1.5, fontWeight: 'bold', fontSize: '1.1rem' }}
             >
-              {isDriver ? "Search Ticket" : "Sign In"}
+              Sign In
             </Button>
 
             <Button

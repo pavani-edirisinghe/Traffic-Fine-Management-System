@@ -7,27 +7,16 @@ import {
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import EmailIcon from '@mui/icons-material/Email';
-import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
-import CommuteIcon from '@mui/icons-material/Commute';
 import { mockOfficers } from '../data/mockData';
 import { signup } from '../services/api';
 import { clearAuth, setAuth, setDriverContext, setOfficerProfile } from '../services/auth';
 
 export default function Signup() {
   const navigate = useNavigate();
-  const [role, setRole] = useState('DRIVER');
+  const [role, setRole] = useState('OFFICER');
   const [input1, setInput1] = useState('');
   const [input2, setInput2] = useState('');
   const [submitting, setSubmitting] = useState(false);
-
-  const isDriver = role === 'DRIVER';
-
-  const violationCategories = [
-    { id: 'SPEEDING_OVER_20', name: 'Speeding' },
-    { id: 'ILLEGAL_PARKING', name: 'Illegal Parking' },
-    { id: 'NO_LICENSE', name: 'Driving Without License' },
-    { id: 'RECKLESS_DRIVING', name: 'Reckless Driving' },
-  ];
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -56,9 +45,8 @@ export default function Signup() {
       }
 
       if (data.role === 'DRIVER') {
-        const driverCtx = { referenceNumber: input1, categoryIdentifier: input2 };
-        setDriverContext(driverCtx);
-        navigate('/driver', { state: driverCtx });
+        alert('Drivers sign in using an access token issued by an officer.');
+        navigate('/login');
       }
     } catch (error) {
       console.error('Signup failed:', error);
@@ -106,7 +94,6 @@ export default function Signup() {
             <FormControl fullWidth sx={{ mb: 3 }}>
               <InputLabel>Account Role</InputLabel>
               <Select value={role} label="Account Role" onChange={handleRoleChange}>
-                <MenuItem value="DRIVER">Driver (Public Citizen)</MenuItem>
                 <MenuItem value="OFFICER">Traffic Police Officer</MenuItem>
                 <MenuItem value="ADMIN">System Administrator</MenuItem>
               </Select>
@@ -114,8 +101,8 @@ export default function Signup() {
 
             <TextField
               fullWidth
-              label={isDriver ? 'Reference Number' : 'Email Address'}
-              placeholder={isDriver ? 'e.g., FIN-2026-8901' : 'e.g., officer@police.lk'}
+              label="Email Address"
+              placeholder="e.g., officer@police.lk"
               variant="outlined"
               sx={{ mb: 3 }}
               required
@@ -124,56 +111,30 @@ export default function Signup() {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    {isDriver ? <ReceiptLongIcon color="action" /> : <EmailIcon color="action" />}
+                    <EmailIcon color="action" />
                   </InputAdornment>
                 ),
               }}
             />
 
-            {isDriver ? (
-              <TextField
-                select
-                fullWidth
-                label="Category Identifier"
-                variant="outlined"
-                sx={{ mb: 4 }}
-                required
-                value={input2}
-                onChange={(e) => setInput2(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <CommuteIcon color="action" />
-                    </InputAdornment>
-                  ),
-                }}
-              >
-                {violationCategories.map((cat) => (
-                  <MenuItem key={cat.id} value={cat.id}>
-                    {cat.name} ({cat.id})
-                  </MenuItem>
-                ))}
-              </TextField>
-            ) : (
-              <TextField
-                fullWidth
-                label="Password"
-                placeholder="••••••••"
-                type="password"
-                variant="outlined"
-                sx={{ mb: 4 }}
-                required
-                value={input2}
-                onChange={(e) => setInput2(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <LockOutlinedIcon color="action" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            )}
+            <TextField
+              fullWidth
+              label="Password"
+              placeholder="••••••••"
+              type="password"
+              variant="outlined"
+              sx={{ mb: 4 }}
+              required
+              value={input2}
+              onChange={(e) => setInput2(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <LockOutlinedIcon color="action" />
+                  </InputAdornment>
+                ),
+              }}
+            />
 
             <Button
               type="submit"
