@@ -6,11 +6,8 @@ import Analytics from './pages/Analytics';
 import Login from './pages/Login';
 import DriverPortal from './pages/DriverPortal';
 import OfficerPortal from './pages/OfficerPortal';
-<<<<<<< HEAD
 import IssueTicket from './pages/IssueTicket';
-=======
 import Transactions from './pages/Transactions';
->>>>>>> 2822869722a13175ec6b4fd00a2c98045095710e
 
 export default function App() {
   return (
