@@ -3,6 +3,7 @@ import { Box, AppBar, Toolbar, Typography, Drawer, List, ListItem, ListItemButto
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import BarChartIcon from '@mui/icons-material/BarChart';
+import LocalPoliceIcon from '@mui/icons-material/LocalPolice';
 
 const drawerWidth = 260;
 
@@ -12,10 +13,11 @@ export default function Layout() {
 
   // Define the navigation architecture
   const menuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/admin' },
-    { text: 'Transactions', icon: <ReceiptLongIcon />, path: '/admin/transactions' },
-    { text: 'Analytics', icon: <BarChartIcon />, path: '/admin/analytics' },
-  ];
+  { text: 'Dashboard', icon: <DashboardIcon />, path: '/admin' },
+  { text: 'Transactions', icon: <ReceiptLongIcon />, path: '/admin/transactions' },
+  { text: 'Analytics', icon: <BarChartIcon />, path: '/admin/analytics' },
+  { text: 'Manage Officers', icon: <LocalPoliceIcon />, path: '/admin/officers' }, // <-- ADD THIS LINE
+];
 
   return (
     <Box sx={{ display: 'flex' }}>

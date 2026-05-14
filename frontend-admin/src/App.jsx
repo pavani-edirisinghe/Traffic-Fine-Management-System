@@ -8,6 +8,7 @@ import DriverPortal from './pages/DriverPortal';
 import OfficerPortal from './pages/OfficerPortal';
 import IssueTicket from './pages/IssueTicket';
 import Transactions from './pages/Transactions';
+import ManageOfficers from './pages/ManageOfficers';
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
           <Route index element={<Dashboard />} />
           <Route path="analytics" element={<Analytics />} /> 
           <Route path="transactions" element={<Transactions />} />
+          <Route path="officers" element={<ManageOfficers />} />
         </Route>
         <Route path="/issue-ticket" element={<IssueTicket />} />
       </Routes>
