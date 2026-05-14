@@ -40,12 +40,17 @@ public class JwtService {
 			claims = Map.of("role", appUser.getRole().name());
 		}
 
+		return generateToken(userDetails.getUsername(), claims);
+	}
+
+	public String generateToken(String subject, Map<String, Object> claims) {
+
 		Instant now = Instant.now();
 		Instant exp = now.plusSeconds(expirationSeconds);
 
 		return Jwts.builder()
 				.claims(claims)
-				.subject(userDetails.getUsername())
+				.subject(subject)
 				.issuedAt(Date.from(now))
 				.expiration(Date.from(exp))
 				.signWith(signingKey)

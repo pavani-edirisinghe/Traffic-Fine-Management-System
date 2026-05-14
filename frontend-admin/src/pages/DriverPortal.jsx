@@ -8,13 +8,20 @@ import PolicyIcon from '@mui/icons-material/Policy';
 import PaymentIcon from '@mui/icons-material/Payment';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { mockFines } from '../data/mockData'; 
-import { getDriverContext } from '../services/auth';
+import { getAuth, getDriverContext, parseJwtPayload } from '../services/auth';
 
 export default function DriverPortal() {
   const location = useLocation();
   const navigate = useNavigate();
-  
-  const ctx = location.state || getDriverContext() || {};
+
+  const auth = getAuth();
+  const payload = auth?.accessToken ? parseJwtPayload(auth.accessToken) : null;
+  const tokenCtx = payload ? {
+    referenceNumber: payload.referenceNumber,
+    categoryIdentifier: payload.categoryIdentifier,
+  } : null;
+
+  const ctx = location.state || getDriverContext() || tokenCtx || {};
   const { referenceNumber, categoryIdentifier } = ctx;
 
   const [fineDetails, setFineDetails] = useState(null);
