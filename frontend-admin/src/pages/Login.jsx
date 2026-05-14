@@ -6,21 +6,31 @@ import {
   InputAdornment, IconButton 
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import { mockOfficers } from '../data/mockData';
 
 export default function Login() {
   const navigate = useNavigate();
   const [role, setRole] = useState('ADMIN');
   const [credentials, setCredentials] = useState({ username: '', password: '' });
 
-  const handleLogin = (e) => {
+    const handleLogin = (e) => {
     e.preventDefault();
-    
-    // Role-Based Routing
-    if (role === 'ADMIN') {
+      
+    if (role === 'OFFICER') {
+      const foundOfficer = mockOfficers.find(
+        (officer) => officer.email === credentials.username && officer.password === credentials.password
+      );
+
+      if (foundOfficer) {
+        navigate('/officer', { state: { currentOfficer: foundOfficer } }); 
+      } else {
+        alert("Invalid Officer Email or Password"); 
+      }
+    } 
+    else if (role === 'ADMIN') {
       navigate('/admin'); 
-    } else if (role === 'OFFICER') {
-      navigate('/officer'); 
-    } else if (role === 'DRIVER') {
+    } 
+    else if (role === 'DRIVER') {
       navigate('/driver'); 
     }
   };
