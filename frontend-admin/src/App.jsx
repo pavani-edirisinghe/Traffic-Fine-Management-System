@@ -1,17 +1,26 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { CssBaseline } from '@mui/material'; // 1. Import CssBaseline
 import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
-import Analytics from './pages/Analytics'; // 1. Import the new page
+import Analytics from './pages/Analytics';
+import Login from './pages/Login';
+import DriverPortal from './pages/DriverPortal';
+import OfficerPortal from './pages/OfficerPortal';
 
 export default function App() {
   return (
     <BrowserRouter>
+      {/* 2. Place it here so it applies to the Login page AND the admin layout */}
+      <CssBaseline /> 
+      
       <Routes>
-        {/* The Layout component wraps all dashboard routes */}
-        <Route path="/" element={<Layout />}>
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/driver" element={<DriverPortal />} />
+        <Route path="/officer" element={<OfficerPortal />} />
+        <Route path="/admin" element={<Layout />}>
           <Route index element={<Dashboard />} />
-          <Route path="analytics" element={<Analytics />} /> {/* 2. Add the route */}
-          {/* <Route path="transactions" element={<Transactions />} /> We will build this later */}
+          <Route path="analytics" element={<Analytics />} />
         </Route>
       </Routes>
     </BrowserRouter>
