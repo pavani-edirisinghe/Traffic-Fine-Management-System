@@ -3,22 +3,31 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Box, Card, CardContent, Typography, TextField, 
   Button, MenuItem, Select, FormControl, InputLabel, 
-  InputAdornment, IconButton 
+  InputAdornment
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import EmailIcon from '@mui/icons-material/Email';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import CommuteIcon from '@mui/icons-material/Commute';
 import { mockOfficers } from '../data/mockData';
 
 export default function Login() {
   const navigate = useNavigate();
   const [role, setRole] = useState('ADMIN');
-  const [credentials, setCredentials] = useState({ username: '', password: '' });
+  
+  // For officers: input1 = email, input2 = password
+  // For drivers: input1 = reference number, input2 = category identifier
+  const [input1, setInput1] = useState('');
+  const [input2, setInput2] = useState('');
 
-    const handleLogin = (e) => {
+  const isDriver = role === 'DRIVER';
+
+  const handleLogin = (e) => {
     e.preventDefault();
       
     if (role === 'OFFICER') {
       const foundOfficer = mockOfficers.find(
-        (officer) => officer.email === credentials.username && officer.password === credentials.password
+        (officer) => officer.email === input1 && officer.password === input2
       );
 
       if (foundOfficer) {
@@ -31,9 +40,28 @@ export default function Login() {
       navigate('/admin'); 
     } 
     else if (role === 'DRIVER') {
-      navigate('/driver'); 
+      navigate('/driver', { 
+        state: { 
+          referenceNumber: input1, 
+          categoryIdentifier: input2 
+        } 
+      }); 
     }
   };
+
+  const handleRoleChange = (e) => {
+    setRole(e.target.value);
+    setInput1('');
+    setInput2('');
+  };
+
+  // Pre-defined categories for the dropdown
+  const violationCategories = [
+    { id: 'SPEEDING_OVER_20', name: 'Speeding' },
+    { id: 'ILLEGAL_PARKING', name: 'Illegal Parking' },
+    { id: 'NO_LICENSE', name: 'Driving Without License' },
+    { id: 'RECKLESS_DRIVING', name: 'Reckless Driving' }
+  ];
 
   return (
     <Box sx={{ 
@@ -72,7 +100,7 @@ export default function Login() {
               <Select
                 value={role}
                 label="Account Role"
-                onChange={(e) => setRole(e.target.value)}
+                onChange={handleRoleChange}
               >
                 <MenuItem value="DRIVER">Driver (Public Citizen)</MenuItem>
                 <MenuItem value="OFFICER">Traffic Police Officer</MenuItem>
@@ -80,26 +108,70 @@ export default function Login() {
               </Select>
             </FormControl>
 
+            {/* DYNAMIC FIELD 1: Email */}
             <TextField
               fullWidth
-              label="Username or Reference No."
+              label={isDriver ? "Reference Number" : "Email Address"}
+              placeholder={isDriver ? "e.g., FIN-2026-8901" : "e.g., officer@police.lk"}
               variant="outlined"
               sx={{ mb: 3 }}
               required
-              value={credentials.username}
-              onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
+              value={input1}
+              onChange={(e) => setInput1(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    {isDriver ? <ReceiptLongIcon color="action" /> : <EmailIcon color="action" />}
+                  </InputAdornment>
+                ),
+              }}
             />
 
-            <TextField
-              fullWidth
-              label="Password"
-              type="password"
-              variant="outlined"
-              sx={{ mb: 4 }}
-              required
-              value={credentials.password}
-              onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
-            />
+            {/* DYNAMIC FIELD 2: Password (Text) OR Category (Dropdown) */}
+            {isDriver ? (
+              <TextField
+                select
+                fullWidth
+                label="Category Identifier"
+                variant="outlined"
+                sx={{ mb: 4 }}
+                required
+                value={input2}
+                onChange={(e) => setInput2(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <CommuteIcon color="action" />
+                    </InputAdornment>
+                  ),
+                }}
+              >
+                {violationCategories.map((cat) => (
+                  <MenuItem key={cat.id} value={cat.id}>
+                    {cat.name} ({cat.id})
+                  </MenuItem>
+                ))}
+              </TextField>
+            ) : (
+              <TextField
+                fullWidth
+                label="Password"
+                placeholder="••••••••"
+                type="password"
+                variant="outlined"
+                sx={{ mb: 4 }}
+                required
+                value={input2}
+                onChange={(e) => setInput2(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <LockOutlinedIcon color="action" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            )}
 
             <Button 
               type="submit" 
@@ -108,7 +180,7 @@ export default function Login() {
               size="large"
               sx={{ py: 1.5, fontWeight: 'bold', fontSize: '1.1rem' }}
             >
-              Sign In
+              {isDriver ? "Search Ticket" : "Sign In"}
             </Button>
           </form>
 
