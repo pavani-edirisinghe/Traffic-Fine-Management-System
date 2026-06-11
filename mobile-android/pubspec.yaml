@@ -1,0 +1,57 @@
+name: traffic_fine_management
+description: "A mobile application for traffic fine payments in Sri Lanka."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  provider: ^6.1.0
+  get_it: ^7.6.0
+  
+  # HTTP & API
+  dio: ^5.3.1
+  
+  # Local Storage
+  shared_preferences: ^2.2.2
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  
+  # Navigation
+  go_router: ^12.0.1
+  
+  # Authentication & Security
+  flutter_secure_storage: ^9.0.0
+  
+  # UI Components
+  cupertino_icons: ^1.0.2
+  google_fonts: ^6.1.0
+  
+  # Utilities
+  intl: ^0.19.0
+  uuid: ^4.0.0
+  
+  # Payment
+  razorpay_flutter: ^1.3.6
+  
+  # Notifications
+  flutter_local_notifications: ^16.0.0
+  
+  # Logger
+  logger: ^2.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  build_runner: ^2.4.8
+  hive_generator: ^2.0.1
+
+flutter:
+  uses-material-design: true
