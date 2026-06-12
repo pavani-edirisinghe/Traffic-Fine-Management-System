@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { Box, Typography, Card, CardContent, TextField, Button, Grid, Snackbar, Alert, Divider } from '@mui/material';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import { createOfficer } from '../services/api';
 
 export default function ManageOfficers() {
   const [formData, setFormData] = useState({
-    fullName: '',
-    badgeId: '',
-    email: '',
-    station: ''
+    username: '',
+    password: ''
   });
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [openSnackbar, setSnackbar] = useState(false);
 
   // ─── Input Handler ───
@@ -17,14 +18,24 @@ export default function ManageOfficers() {
   };
 
   // ─── Submit Handler ───
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Later, this is where we will send the data to the Spring Boot backend
-    console.log("Registering Officer:", formData);
-    
-    // Show success message and clear form
-    setSnackbar(true);
-    setFormData({ fullName: '', badgeId: '', email: '', station: '' });
+    setSubmitting(true);
+    setErrorMessage('');
+
+    try {
+      await createOfficer({
+        username: formData.username.trim(),
+        password: formData.password,
+      });
+      setSnackbar(true);
+      setFormData({ username: '', password: '' });
+    } catch (error) {
+      const apiMessage = error?.response?.data?.message;
+      setErrorMessage(apiMessage || 'Unable to create officer account.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -43,42 +54,28 @@ export default function ManageOfficers() {
               <form onSubmit={handleSubmit}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
                   <TextField 
-                    label="Full Name" 
-                    name="fullName"
-                    value={formData.fullName}
+                    label="Officer Username" 
+                    name="username"
+                    value={formData.username}
                     onChange={handleChange}
                     required 
                     fullWidth 
                   />
                   <TextField 
-                    label="Badge ID / Service No." 
-                    name="badgeId"
-                    value={formData.badgeId}
+                    label="Temporary Password" 
+                    name="password"
+                    type="password"
+                    value={formData.password}
                     onChange={handleChange}
                     required 
                     fullWidth 
                   />
-                  <TextField 
-                    label="Official Email" 
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required 
-                    fullWidth 
-                  />
-                  <TextField 
-                    label="Assigned Police Station" 
-                    name="station"
-                    value={formData.station}
-                    onChange={handleChange}
-                    required 
-                    fullWidth 
-                  />
+                  {errorMessage ? <Alert severity="error">{errorMessage}</Alert> : null}
                   <Button 
                     type="submit" 
                     variant="contained" 
                     size="large" 
+                    disabled={submitting}
                     sx={{ mt: 2, py: 1.5, fontWeight: 'bold' }}
                   >
                     Generate Officer Account
@@ -96,13 +93,13 @@ export default function ManageOfficers() {
               <Typography variant="h6" gutterBottom>Security Protocol</Typography>
               <Divider sx={{ mb: 2 }} />
               <Typography variant="body2" color="text.secondary" paragraph>
-                1. Verify the officer's credentials before creating an account.
+                1. Verify the officer's identity before creating a login.
               </Typography>
               <Typography variant="body2" color="text.secondary" paragraph>
-                2. Generating an account will automatically send a temporary password to the provided official email address.
+                2. Share the generated username and temporary password through a secure channel.
               </Typography>
               <Typography variant="body2" color="text.secondary" paragraph>
-                3. The officer will be forced to change this password upon their first login to the mobile application or officer portal.
+                3. Drivers do not get passwords. Officers issue access tokens for driver login.
               </Typography>
             </CardContent>
           </Card>

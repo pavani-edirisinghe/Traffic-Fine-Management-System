@@ -189,14 +189,9 @@ export default function Login() {
               Sign In
             </Button>
 
-            <Button
-              fullWidth
-              variant="text"
-              onClick={() => navigate('/signup')}
-              sx={{ mt: 1.5, fontWeight: 'bold' }}
-            >
-              Create an account
-            </Button>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, textAlign: 'center' }}>
+              Officer accounts are created by admins. Drivers sign in with an officer-issued token.
+            </Typography>
           </form>
 
         </CardContent>

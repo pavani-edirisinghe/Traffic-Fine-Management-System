@@ -21,13 +21,13 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-export const signup = async ({ username, password, role }) => {
-  const response = await apiClient.post('/auth/signup', { username, password, role });
+export const login = async ({ username, password }) => {
+  const response = await apiClient.post('/auth/login', { username, password });
   return response.data;
 };
 
-export const login = async ({ username, password }) => {
-  const response = await apiClient.post('/auth/login', { username, password });
+export const createOfficer = async ({ username, password }) => {
+  const response = await apiClient.post('/admin/officers', { username, password });
   return response.data;
 };
 

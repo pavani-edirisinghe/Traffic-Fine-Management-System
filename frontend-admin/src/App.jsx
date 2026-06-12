@@ -4,7 +4,6 @@ import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
 import Analytics from './pages/Analytics';
 import Login from './pages/Login';
-import Signup from './pages/Signup';
 import DriverPortal from './pages/DriverPortal';
 import OfficerPortal from './pages/OfficerPortal';
 import IssueTicket from './pages/IssueTicket';
@@ -32,7 +31,6 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
         <Route path="/driver" element={
           <RequireRole allowedRoles={["DRIVER"]}>
             <DriverPortal />
