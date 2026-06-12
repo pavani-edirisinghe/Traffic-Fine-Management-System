@@ -17,6 +17,7 @@ export default function ManageOfficers() {
   const [officers, setOfficers] = useState([]);
   const [loadingOfficers, setLoadingOfficers] = useState(false);
   const [lastCreatedOfficer, setLastCreatedOfficer] = useState(null);
+  const [lastOfficerAction, setLastOfficerAction] = useState('created');
   const [editingOfficer, setEditingOfficer] = useState(null);
 
   useEffect(() => {
@@ -47,7 +48,8 @@ export default function ManageOfficers() {
     setErrorMessage('');
 
     try {
-      const created = editingOfficer
+      const isEdit = Boolean(editingOfficer);
+      const created = isEdit
         ? await updateOfficer({
             currentUsername: editingOfficer.username,
             newUsername: formData.username.trim(),
@@ -57,6 +59,7 @@ export default function ManageOfficers() {
             username: formData.username.trim(),
             password: formData.password,
           });
+      setLastOfficerAction(isEdit ? 'updated' : 'created');
       setLastCreatedOfficer(created);
       setSnackbar(true);
       setFormData({ username: '', password: '' });
@@ -205,7 +208,7 @@ export default function ManageOfficers() {
       >
         <Alert onClose={() => setSnackbar(false)} severity="success" sx={{ width: '100%' }}>
           {lastCreatedOfficer
-            ? `${editingOfficer ? 'Officer updated' : 'Officer created'}: ${lastCreatedOfficer.username}. Default password: ${lastCreatedOfficer.temporaryPassword}`
+            ? `Officer ${lastOfficerAction}: ${lastCreatedOfficer.username}.`
             : 'Officer account generated successfully!'}
         </Alert>
       </Snackbar>
