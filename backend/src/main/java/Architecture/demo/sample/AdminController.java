@@ -62,6 +62,9 @@ public class AdminController {
 
 		String username = request.username().trim();
 		String temporaryPassword = request.password().trim();
+		if (temporaryPassword.length() < 12) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "password must be at least 12 characters");
+		}
 		if (userRepository.existsByUsername(username)) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT, "username already exists");
 		}

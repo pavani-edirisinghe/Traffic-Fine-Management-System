@@ -16,8 +16,8 @@ export default function LogoutButton(props) {
       variant="outlined"
       color="inherit"
       startIcon={<LogoutIcon />}
-      onClick={handleLogout}
       {...props}
+      onClick={handleLogout}
     >
       Logout
     </Button>
