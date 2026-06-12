@@ -40,40 +40,120 @@ public class AdminController {
 	}
 
 	@GetMapping("/officers")
-	public List<UserSummaryResponse> getOfficers() {
-		return userRepository.findAllByRole(Role.OFFICER).stream()
-				.map(user -> new UserSummaryResponse(user.getId(), user.getUsername(), user.getDisplayName(), user.getPhoneNumber(), user.getRole()))
-				.toList();
-	}
+public List<UserSummaryResponse> getOfficers() {
+    return userRepository.findAllByRole(Role.OFFICER).stream()
+            .map(u -> new UserSummaryResponse(
+                u.getId(), 
+                u.getUsername(), 
+                u.getDisplayName(), 
+                u.getPhoneNumber(), 
+                u.getFullName() != null ? u.getFullName() : "", // Fallback
+                u.getBadgeId() != null ? u.getBadgeId() : "", 
+                u.getDistrict() != null ? u.getDistrict() : "", 
+                u.getRole()
+            ))
+            .toList();
+}
 
 	@GetMapping("/drivers")
-	public List<UserSummaryResponse> getDrivers() {
-		return userRepository.findAllByRole(Role.DRIVER).stream()
-				.map(user -> new UserSummaryResponse(user.getId(), user.getUsername(), user.getDisplayName(), user.getPhoneNumber(), user.getRole()))
-				.toList();
-	}
+public List<UserSummaryResponse> getDrivers() {
+    return userRepository.findAllByRole(Role.DRIVER).stream()
+            .map(u -> new UserSummaryResponse(
+                u.getId(), 
+                u.getUsername(), 
+                u.getDisplayName(), 
+                u.getPhoneNumber(), 
+                u.getFullName(),  // Added
+                u.getBadgeId(),   // Added
+                u.getDistrict(),  // Added
+                u.getRole()
+            ))
+            .toList();
+}
 
-	@PostMapping("/officers")
-	@ResponseStatus(HttpStatus.CREATED)
-	public CreateOfficerResponse createOfficer(@RequestBody CreateOfficerRequest request) {
-		if (request == null || isBlank(request.username()) || isBlank(request.password())) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "username and password are required");
-		}
+@PostMapping("/officers")
+@ResponseStatus(HttpStatus.CREATED)
+public CreateOfficerResponse createOfficer(@RequestBody CreateOfficerRequest request) {
 
-		String username = request.username().trim();
-		String temporaryPassword = request.password().trim();
-		if (temporaryPassword.length() < 12) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "password must be at least 12 characters");
-		}
-		if (userRepository.existsByUsername(username)) {
-			throw new ResponseStatusException(HttpStatus.CONFLICT, "username already exists");
-		}
+    // Validate request
+    if (request == null) {
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Request body is required");
+    }
 
-		AppUser officer = new AppUser(username, passwordEncoder.encode(temporaryPassword), Role.OFFICER);
-		userRepository.save(officer);
-		return new CreateOfficerResponse(officer.getId(), officer.getUsername(), temporaryPassword);
-	}
+    if (isBlank(request.username())) {
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Username is required");
+    }
 
+    if (isBlank(request.password())) {
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Password is required");
+    }
+
+    if (isBlank(request.fullName())) {
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Full Name is required");
+    }
+
+    if (isBlank(request.badgeId())) {
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Badge ID is required");
+    }
+
+    if (isBlank(request.phoneNumber())) {
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Phone Number is required");
+    }
+
+    if (isBlank(request.district())) {
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "District is required");
+    }
+
+    String username = request.username().trim();
+    String temporaryPassword = request.password().trim();
+
+    // Password validation
+    if (temporaryPassword.length() < 8) {
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Password must be at least 8 characters");
+    }
+
+    // Username already exists
+    if (userRepository.existsByUsername(username)) {
+        throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "Username already exists");
+    }
+
+    // Create officer
+    AppUser officer = new AppUser(
+            username,
+            passwordEncoder.encode(temporaryPassword),
+            request.fullName().trim(),
+            request.badgeId().trim(),
+            request.phoneNumber().trim(),
+            request.district().trim(),
+            Role.OFFICER
+    );
+
+    userRepository.save(officer);
+
+    return new CreateOfficerResponse(
+            officer.getId(),
+            officer.getUsername(),
+            temporaryPassword
+    );
+}
 	@PutMapping("/officers/{username}")
 	public CreateOfficerResponse updateOfficer(
 			@PathVariable String username,
