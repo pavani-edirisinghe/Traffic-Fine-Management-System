@@ -10,6 +10,7 @@ import AddIcon from '@mui/icons-material/Add';
 import { useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { mockFines } from '../data/mockData';
 import { getOfficerProfile } from '../services/auth';
+import LogoutButton from '../components/LogoutButton';
 
 export default function OfficerPortal() {
   const location = useLocation();
@@ -63,6 +64,7 @@ export default function OfficerPortal() {
           >
             Issue New Ticket
           </Button>
+          <LogoutButton sx={{ ml: 2, color: '#0f172a', borderColor: '#cbd5e1' }} />
         </Box>
 
         {/* KPI Cards */}

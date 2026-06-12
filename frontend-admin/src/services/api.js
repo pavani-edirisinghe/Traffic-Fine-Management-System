@@ -31,6 +31,28 @@ export const createOfficer = async ({ username, password }) => {
   return response.data;
 };
 
+export const updateOfficer = async ({ currentUsername, newUsername, newPassword }) => {
+  const response = await apiClient.put(`/admin/officers/${encodeURIComponent(currentUsername)}`, {
+    newUsername,
+    newPassword,
+  });
+  return response.data;
+};
+
+export const deleteOfficer = async (username) => {
+  await apiClient.delete(`/admin/officers/${encodeURIComponent(username)}`);
+};
+
+export const getOfficers = async () => {
+  const response = await apiClient.get('/admin/officers');
+  return response.data;
+};
+
+export const getDrivers = async () => {
+  const response = await apiClient.get('/admin/drivers');
+  return response.data;
+};
+
 export const me = async () => {
   const response = await apiClient.get('/auth/me');
   return response.data;

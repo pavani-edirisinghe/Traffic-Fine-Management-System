@@ -9,6 +9,7 @@ import PaymentIcon from '@mui/icons-material/Payment';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { mockFines } from '../data/mockData'; 
 import { getAuth, getDriverContext, parseJwtPayload } from '../services/auth';
+import LogoutButton from '../components/LogoutButton';
 
 export default function DriverPortal() {
   const location = useLocation();
@@ -71,13 +72,16 @@ export default function DriverPortal() {
       
       {/* Back Button */}
       <Box sx={{ width: '100%', maxWidth: 480, mb: 2 }}>
-        <Button 
-          startIcon={<ArrowBackIcon />} 
-          onClick={() => navigate('/login')}
-          sx={{ fontWeight: 'bold' }}
-        >
-          Search Another Ticket
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'space-between' }}>
+          <Button 
+            startIcon={<ArrowBackIcon />} 
+            onClick={() => navigate('/login')}
+            sx={{ fontWeight: 'bold' }}
+          >
+            Search Another Ticket
+          </Button>
+          <LogoutButton sx={{ color: '#0f172a', borderColor: '#cbd5e1' }} />
+        </Box>
       </Box>
 
       <Card elevation={6} sx={{ maxWidth: 480, width: '100%', borderRadius: 3, overflow: 'hidden' }}>

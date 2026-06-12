@@ -7,6 +7,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { mockFines } from '../data/mockData';
 import { getOfficerProfile } from '../services/auth';
+import LogoutButton from '../components/LogoutButton';
 
 export default function IssueTicket() {
   const location = useLocation();
@@ -62,13 +63,16 @@ export default function IssueTicket() {
     <Box sx={{ minHeight: '80vh', backgroundColor: '#f8fafc', p: 4, display: 'flex', justifyContent: 'center' }}>
       <Box sx={{ width: '100%', maxWidth: 600 }}>
         
-        <Button 
-          startIcon={<ArrowBackIcon />} 
-          onClick={() => navigate('/officer', { state: { currentOfficer } })}
-          sx={{ mb: 1, fontWeight: 'bold' }}
-        >
-          Back to Dashboard
-        </Button>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <Button 
+            startIcon={<ArrowBackIcon />} 
+            onClick={() => navigate('/officer', { state: { currentOfficer } })}
+            sx={{ fontWeight: 'bold' }}
+          >
+            Back to Dashboard
+          </Button>
+          <LogoutButton sx={{ color: '#0f172a', borderColor: '#cbd5e1' }} />
+        </Box>
 
         <Card elevation={4} sx={{ borderRadius: 3 }}>
           <Box sx={{ backgroundColor: '#1976d2', color: 'white', p: 2 }}>

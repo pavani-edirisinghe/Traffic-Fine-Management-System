@@ -1,7 +1,10 @@
-import { useState } from 'react';
-import { Box, Typography, Card, CardContent, TextField, Button, Grid, Snackbar, Alert, Divider } from '@mui/material';
+import { useEffect, useState } from 'react';
+import { Box, Typography, Card, CardContent, TextField, Button, Grid, Snackbar, Alert, Divider, Stack, IconButton } from '@mui/material';
+import { DataGrid } from '@mui/x-data-grid';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
-import { createOfficer } from '../services/api';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { createOfficer, deleteOfficer, getOfficers, updateOfficer } from '../services/api';
 
 export default function ManageOfficers() {
   const [formData, setFormData] = useState({
@@ -11,6 +14,26 @@ export default function ManageOfficers() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [openSnackbar, setSnackbar] = useState(false);
+  const [officers, setOfficers] = useState([]);
+  const [loadingOfficers, setLoadingOfficers] = useState(false);
+  const [lastCreatedOfficer, setLastCreatedOfficer] = useState(null);
+  const [editingOfficer, setEditingOfficer] = useState(null);
+
+  useEffect(() => {
+    const loadOfficers = async () => {
+      setLoadingOfficers(true);
+      try {
+        const data = await getOfficers();
+        setOfficers(data);
+      } catch (error) {
+        setErrorMessage(error?.response?.data?.message || 'Unable to load officers.');
+      } finally {
+        setLoadingOfficers(false);
+      }
+    };
+
+    loadOfficers();
+  }, []);
 
   // ─── Input Handler ───
   const handleChange = (e) => {
@@ -24,17 +47,50 @@ export default function ManageOfficers() {
     setErrorMessage('');
 
     try {
-      await createOfficer({
-        username: formData.username.trim(),
-        password: formData.password,
-      });
+      const created = editingOfficer
+        ? await updateOfficer({
+            currentUsername: editingOfficer.username,
+            newUsername: formData.username.trim(),
+            newPassword: formData.password,
+          })
+        : await createOfficer({
+            username: formData.username.trim(),
+            password: formData.password,
+          });
+      setLastCreatedOfficer(created);
       setSnackbar(true);
       setFormData({ username: '', password: '' });
+      setEditingOfficer(null);
+      const refreshed = await getOfficers();
+      setOfficers(refreshed);
     } catch (error) {
       const apiMessage = error?.response?.data?.message;
       setErrorMessage(apiMessage || 'Unable to create officer account.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const startEdit = (officer) => {
+    setEditingOfficer(officer);
+    setFormData({ username: officer.username || '', password: '' });
+    setErrorMessage('');
+  };
+
+  const handleDelete = async (officer) => {
+    const confirmed = window.confirm(`Delete officer ${officer.username}?`);
+    if (!confirmed) return;
+
+    try {
+      await deleteOfficer(officer.username);
+      const refreshed = await getOfficers();
+      setOfficers(refreshed);
+      if (editingOfficer?.username === officer.username) {
+        setEditingOfficer(null);
+        setFormData({ username: '', password: '' });
+      }
+    } catch (error) {
+      setErrorMessage(error?.response?.data?.message || 'Unable to delete officer.');
     }
   };
 
@@ -62,7 +118,7 @@ export default function ManageOfficers() {
                     fullWidth 
                   />
                   <TextField 
-                    label="Temporary Password" 
+                    label="Default Password" 
                     name="password"
                     type="password"
                     value={formData.password}
@@ -71,36 +127,70 @@ export default function ManageOfficers() {
                     fullWidth 
                   />
                   {errorMessage ? <Alert severity="error">{errorMessage}</Alert> : null}
-                  <Button 
-                    type="submit" 
-                    variant="contained" 
-                    size="large" 
-                    disabled={submitting}
-                    sx={{ mt: 2, py: 1.5, fontWeight: 'bold' }}
-                  >
-                    Generate Officer Account
-                  </Button>
+                  <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+                    <Button 
+                      type="submit" 
+                      variant="contained" 
+                      size="large" 
+                      disabled={submitting}
+                      sx={{ py: 1.5, fontWeight: 'bold', flex: 1 }}
+                    >
+                      {editingOfficer ? 'Update Officer' : 'Generate Officer Account'}
+                    </Button>
+                    {editingOfficer ? (
+                      <Button
+                        variant="outlined"
+                        onClick={() => {
+                          setEditingOfficer(null);
+                          setFormData({ username: '', password: '' });
+                          setErrorMessage('');
+                        }}
+                        sx={{ py: 1.5, fontWeight: 'bold' }}
+                      >
+                        Cancel
+                      </Button>
+                    ) : null}
+                  </Stack>
                 </Box>
               </form>
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Instructions / Recent Column */}
+        {/* Officers List Column */}
         <Grid item xs={12} md={6}>
           <Card elevation={2} sx={{ height: '100%' }}>
             <CardContent>
-              <Typography variant="h6" gutterBottom>Security Protocol</Typography>
+              <Typography variant="h6" gutterBottom>Added Officers</Typography>
               <Divider sx={{ mb: 2 }} />
-              <Typography variant="body2" color="text.secondary" paragraph>
-                1. Verify the officer's identity before creating a login.
-              </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                2. Share the generated username and temporary password through a secure channel.
-              </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                3. Drivers do not get passwords. Officers issue access tokens for driver login.
-              </Typography>
+              <Box sx={{ height: 360, width: '100%' }}>
+                <DataGrid
+                  rows={officers.map((officer, index) => ({ id: officer.username || index, ...officer }))}
+                  columns={[
+                    { field: 'username', headerName: 'Username', flex: 1, minWidth: 180 },
+                      {
+                        field: 'actions',
+                        headerName: 'Actions',
+                        width: 120,
+                        sortable: false,
+                        renderCell: (params) => (
+                          <Box>
+                            <IconButton size="small" onClick={() => startEdit(params.row)}>
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton size="small" color="error" onClick={() => handleDelete(params.row)}>
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        ),
+                      },
+                  ]}
+                  loading={loadingOfficers}
+                  disableRowSelectionOnClick
+                  pageSizeOptions={[5, 10]}
+                  initialState={{ pagination: { paginationModel: { pageSize: 5 } } }}
+                />
+              </Box>
             </CardContent>
           </Card>
         </Grid>
@@ -114,7 +204,9 @@ export default function ManageOfficers() {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
         <Alert onClose={() => setSnackbar(false)} severity="success" sx={{ width: '100%' }}>
-          Officer account generated successfully!
+          {lastCreatedOfficer
+            ? `${editingOfficer ? 'Officer updated' : 'Officer created'}: ${lastCreatedOfficer.username}. Default password: ${lastCreatedOfficer.temporaryPassword}`
+            : 'Officer account generated successfully!'}
         </Alert>
       </Snackbar>
     </Box>

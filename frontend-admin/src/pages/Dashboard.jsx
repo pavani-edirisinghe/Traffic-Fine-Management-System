@@ -1,9 +1,29 @@
-import { Box, Grid, Card, CardContent, Typography } from '@mui/material';
+import { useEffect, useState } from 'react';
+import { Box, Grid, Card, CardContent, Typography, Divider } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { mockFines } from '../data/mockData';
+import { getDrivers, getOfficers } from '../services/api';
 
 export default function Dashboard() {
+  const [officers, setOfficers] = useState([]);
+  const [drivers, setDrivers] = useState([]);
+
+  useEffect(() => {
+    const loadAccounts = async () => {
+      try {
+        const [officerData, driverData] = await Promise.all([getOfficers(), getDrivers()]);
+        setOfficers(officerData);
+        setDrivers(driverData);
+      } catch {
+        setOfficers([]);
+        setDrivers([]);
+      }
+    };
+
+    loadAccounts();
+  }, []);
+
   // 1. Calculate KPI Metrics
   const totalRevenue = mockFines
     .filter(fine => fine.status === 'PAID')
@@ -45,6 +65,10 @@ export default function Dashboard() {
         </span>
       )
     },
+  ];
+
+  const accountColumns = [
+    { field: 'username', headerName: 'Username', flex: 1, minWidth: 180 },
   ];
 
   return (
@@ -144,6 +168,46 @@ export default function Dashboard() {
           pageSizeOptions={[10, 25, 50]}
           disableRowSelectionOnClick
         />
+      </Box>
+
+      <Box sx={{ mt: 3 }}>
+        <Typography variant="h6" sx={{ mb: 1 }}>Account Overview</Typography>
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <Card elevation={2}>
+              <CardContent>
+                <Typography variant="subtitle1" fontWeight="bold">Officers</Typography>
+                <Divider sx={{ my: 1.5 }} />
+                <Box sx={{ height: 320, width: '100%' }}>
+                  <DataGrid
+                    rows={officers.map((officer, index) => ({ id: officer.username || index, ...officer }))}
+                    columns={accountColumns}
+                    disableRowSelectionOnClick
+                    pageSizeOptions={[5, 10]}
+                    initialState={{ pagination: { paginationModel: { pageSize: 5 } } }}
+                  />
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Card elevation={2}>
+              <CardContent>
+                <Typography variant="subtitle1" fontWeight="bold">Drivers</Typography>
+                <Divider sx={{ my: 1.5 }} />
+                <Box sx={{ height: 320, width: '100%' }}>
+                  <DataGrid
+                    rows={drivers.map((driver, index) => ({ id: driver.username || index, ...driver }))}
+                    columns={accountColumns}
+                    disableRowSelectionOnClick
+                    pageSizeOptions={[5, 10]}
+                    initialState={{ pagination: { paginationModel: { pageSize: 5 } } }}
+                  />
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
       </Box>
     </Box>
   );
