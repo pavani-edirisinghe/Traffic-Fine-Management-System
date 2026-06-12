@@ -29,6 +29,12 @@ public class AppUser implements UserDetails {
 	@Column(nullable = false)
 	private String password;
 
+	@Column
+	private String displayName;
+
+	@Column
+	private String phoneNumber;
+
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
 	private Role role;
@@ -39,6 +45,14 @@ public class AppUser implements UserDetails {
 	public AppUser(String username, String password, Role role) {
 		this.username = username;
 		this.password = password;
+		this.role = role;
+	}
+
+	public AppUser(String username, String password, String displayName, String phoneNumber, Role role) {
+		this.username = username;
+		this.password = password;
+		this.displayName = displayName;
+		this.phoneNumber = phoneNumber;
 		this.role = role;
 	}
 
@@ -66,6 +80,22 @@ public class AppUser implements UserDetails {
 
 	public void setPassword(String password) {
 		this.password = password;
+	}
+
+	public String getDisplayName() {
+		return displayName;
+	}
+
+	public void setDisplayName(String displayName) {
+		this.displayName = displayName;
+	}
+
+	public String getPhoneNumber() {
+		return phoneNumber;
+	}
+
+	public void setPhoneNumber(String phoneNumber) {
+		this.phoneNumber = phoneNumber;
 	}
 
 	public Role getRole() {

@@ -7,6 +7,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { mockFines } from '../data/mockData';
 import { getOfficerProfile } from '../services/auth';
+import LogoutButton from '../components/LogoutButton';
 
 export default function IssueTicket() {
   const location = useLocation();
@@ -15,6 +16,7 @@ export default function IssueTicket() {
 
   const [newTicket, setNewTicket] = useState({ 
     categoryIdentifier: '', 
+    wrongDid: '',
     amount: '',
     vehicleNumber: '', 
     driverLicense: ''  
@@ -41,7 +43,7 @@ export default function IssueTicket() {
       referenceNumber: `FIN-2026-${Math.floor(1000 + Math.random() * 9000)}`,
       officerId: currentOfficer.id,
       categoryIdentifier: newTicket.categoryIdentifier,
-      categoryName: categoryName,
+      categoryName: newTicket.wrongDid || categoryName,
       amount: Number(newTicket.amount),
       vehicleNumber: newTicket.vehicleNumber.toUpperCase(),
       driverLicense: newTicket.driverLicense.toUpperCase(),
@@ -62,13 +64,16 @@ export default function IssueTicket() {
     <Box sx={{ minHeight: '80vh', backgroundColor: '#f8fafc', p: 4, display: 'flex', justifyContent: 'center' }}>
       <Box sx={{ width: '100%', maxWidth: 600 }}>
         
-        <Button 
-          startIcon={<ArrowBackIcon />} 
-          onClick={() => navigate('/officer', { state: { currentOfficer } })}
-          sx={{ mb: 1, fontWeight: 'bold' }}
-        >
-          Back to Dashboard
-        </Button>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <Button 
+            startIcon={<ArrowBackIcon />} 
+            onClick={() => navigate('/officer', { state: { currentOfficer } })}
+            sx={{ fontWeight: 'bold' }}
+          >
+            Back to Dashboard
+          </Button>
+          <LogoutButton sx={{ color: '#0f172a', borderColor: '#cbd5e1' }} />
+        </Box>
 
         <Card elevation={4} sx={{ borderRadius: 3 }}>
           <Box sx={{ backgroundColor: '#1976d2', color: 'white', p: 2 }}>
@@ -82,6 +87,15 @@ export default function IssueTicket() {
             <form onSubmit={handleIssueTicket}>
               
               <Typography variant="subtitle2" color="textSecondary" sx={{ mb: 2 }}>VIOLATION DETAILS</Typography>
+              <TextField
+                fullWidth
+                label="Wrong Did / Violation Description"
+                variant="outlined"
+                required
+                sx={{ mb: 2 }}
+                value={newTicket.wrongDid}
+                onChange={(e) => setNewTicket({ ...newTicket, wrongDid: e.target.value })}
+              />
               
               <FormControl fullWidth sx={{ mb: 2 }}>
                 <InputLabel>Violation Category *</InputLabel>

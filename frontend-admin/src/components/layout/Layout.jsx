@@ -4,6 +4,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import LocalPoliceIcon from '@mui/icons-material/LocalPolice';
+import LogoutButton from '../LogoutButton';
 
 const drawerWidth = 260;
 
@@ -29,6 +30,8 @@ export default function Layout() {
           <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold', letterSpacing: 1 }}>
             Traffic Fine Admin Portal
           </Typography>
+          <Box sx={{ flexGrow: 1 }} />
+          <LogoutButton />
         </Toolbar>
       </AppBar>
 

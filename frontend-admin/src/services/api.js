@@ -21,13 +21,40 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-export const signup = async ({ username, password, role }) => {
-  const response = await apiClient.post('/auth/signup', { username, password, role });
+export const login = async ({ username, password }) => {
+  const response = await apiClient.post('/auth/login', { username, password });
   return response.data;
 };
 
-export const login = async ({ username, password }) => {
-  const response = await apiClient.post('/auth/login', { username, password });
+export const createOfficer = async ({ username, password }) => {
+  const response = await apiClient.post('/admin/officers', { username, password });
+  return response.data;
+};
+
+export const updateOfficer = async ({ currentUsername, newUsername, newPassword }) => {
+  const response = await apiClient.put(`/admin/officers/${encodeURIComponent(currentUsername)}`, {
+    newUsername,
+    newPassword,
+  });
+  return response.data;
+};
+
+export const deleteOfficer = async (username) => {
+  await apiClient.delete(`/admin/officers/${encodeURIComponent(username)}`);
+};
+
+export const issueDriverToken = async (payload) => {
+  const response = await apiClient.post('/officer/driver-token', payload);
+  return response.data;
+};
+
+export const getOfficers = async () => {
+  const response = await apiClient.get('/admin/officers');
+  return response.data;
+};
+
+export const getDrivers = async () => {
+  const response = await apiClient.get('/admin/drivers');
   return response.data;
 };
 
