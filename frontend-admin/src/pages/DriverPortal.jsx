@@ -8,7 +8,7 @@ import PolicyIcon from '@mui/icons-material/Policy';
 import PaymentIcon from '@mui/icons-material/Payment';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { mockFines } from '../data/mockData'; 
-import { getAuth, getDriverContext, parseJwtPayload } from '../services/auth';
+import { appendOfficerNotification, getAuth, getDriverContext, parseJwtPayload } from '../services/auth';
 import LogoutButton from '../components/LogoutButton';
 
 export default function DriverPortal() {
@@ -71,8 +71,30 @@ export default function DriverPortal() {
   const handlePayment = () => {
     setLoading(true);
     setTimeout(() => {
+      const paidAt = new Date().toISOString();
+      const paidNotification = {
+        officerId: fineDetails?.officerId || 'unknown',
+        referenceNumber: fineDetails?.referenceNumber || 'N/A',
+        driverName: fineDetails?.driverName || 'N/A',
+        phoneNumber: fineDetails?.phoneNumber || 'N/A',
+        vehicleNumber: fineDetails?.vehicleNumber || 'N/A',
+        amount: fineDetails?.amount || 0,
+        paidAt,
+        message: `${fineDetails?.driverName || 'Driver'} paid Rs. ${Number(fineDetails?.amount || 0).toLocaleString()} for ${fineDetails?.referenceNumber || 'the ticket'} at ${new Date(paidAt).toLocaleString('en-US')}`,
+      };
+
+      if (fineDetails?.officerId) {
+        appendOfficerNotification(fineDetails.officerId, paidNotification);
+      }
+
+      const matchedFine = mockFines.find((fine) => fine.referenceNumber === fineDetails?.referenceNumber);
+      if (matchedFine) {
+        matchedFine.status = 'PAID';
+        matchedFine.datePaid = paidAt;
+      }
+
       setPaymentStatus('SUCCESS');
-      setFineDetails({ ...fineDetails, status: 'PAID' });
+      setFineDetails({ ...fineDetails, status: 'PAID', datePaid: paidAt });
       setLoading(false);
     }, 1500);
   };
