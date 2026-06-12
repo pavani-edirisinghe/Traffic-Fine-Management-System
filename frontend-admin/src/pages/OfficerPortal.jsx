@@ -1,5 +1,5 @@
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -24,7 +24,12 @@ import LocalPoliceIcon from '@mui/icons-material/LocalPolice';
 import AddIcon from '@mui/icons-material/Add';
 import { useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { mockFines } from '../data/mockData';
-import { getOfficerProfile } from '../services/auth';
+import {
+  appendOfficerTokenHistory,
+  getOfficerNotifications,
+  getOfficerProfile,
+  getOfficerTokenHistory,
+} from '../services/auth';
 import { issueDriverToken } from '../services/api';
 import LogoutButton from '../components/LogoutButton';
 
@@ -46,6 +51,8 @@ export default function OfficerPortal() {
   const [generatedToken, setGeneratedToken] = useState(null);
   const [tokenError, setTokenError] = useState('');
   const [issuingToken, setIssuingToken] = useState(false);
+  const [tokenHistory, setTokenHistory] = useState(() => getOfficerTokenHistory(currentOfficer?.id));
+  const [notificationHistory, setNotificationHistory] = useState(() => getOfficerNotifications(currentOfficer?.id));
 
   const officerFines = useMemo(
     () => mockFines.filter((fine) => fine.officerId === currentOfficer?.id),
@@ -84,7 +91,17 @@ export default function OfficerPortal() {
 
     try {
       const data = await issueDriverToken(driverForm);
-      setGeneratedToken(data);
+      const tokenCode = crypto.randomUUID().replace(/-/g, '').slice(0, 15).toUpperCase();
+      const nextRecord = {
+        ...data,
+        ...driverForm,
+        tokenCode,
+        officerId: currentOfficer.id,
+        officerName: currentOfficer.name,
+        savedAt: new Date().toISOString(),
+      };
+      setTokenHistory(appendOfficerTokenHistory(currentOfficer.id, nextRecord));
+      setGeneratedToken({ ...data, tokenCode });
       setDriverForm(INITIAL_FORM_STATE);
     } catch (error) {
       setTokenError(error?.response?.data?.message || 'Unable to generate driver token.');
@@ -92,6 +109,29 @@ export default function OfficerPortal() {
       setIssuingToken(false);
     }
   };
+
+  const formatIssuedAt = (value) => {
+    if (!value) return 'N/A';
+    return new Date(value).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const formatAmount = (value) => `Rs. ${Number(value || 0).toLocaleString()}`;
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setTokenHistory(getOfficerTokenHistory(currentOfficer?.id));
+      setNotificationHistory(getOfficerNotifications(currentOfficer?.id));
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [currentOfficer?.id]);
 
   const paidFinesCount = officerFines.filter((f) => f.status === 'PAID').length;
   const pendingFinesCount = officerFines.filter((f) => f.status === 'PENDING').length;
@@ -260,15 +300,140 @@ export default function OfficerPortal() {
 
             {generatedToken && (
               <Alert severity="success" sx={{ mt: 2, whiteSpace: 'pre-wrap' }}>
-                Token generated for {generatedToken.username}. Share this token with the driver:
+                Token generated for {generatedToken.username}. Share this 15-character token code with the driver:
                 {'\n'}
-                {generatedToken.accessToken}
+                {generatedToken.tokenCode}
                 {'\n'}
                 Officer ID: {currentOfficer.id}
               </Alert>
             )}
           </CardContent>
         </Card>
+
+        <TableContainer component={Paper} elevation={3} sx={{ borderRadius: 3, overflow: 'hidden', mb: 4 }}>
+          <Box sx={{ backgroundColor: '#0f172a', color: 'white', p: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="h6" fontWeight="medium">
+              Saved Driver Tokens
+            </Typography>
+          </Box>
+
+          {tokenHistory.length === 0 ? (
+            <Alert severity="info" sx={{ m: 2 }}>
+              No driver tokens have been generated yet.
+            </Alert>
+          ) : (
+            <Box sx={{ width: '100%', backgroundColor: 'white', overflowX: 'auto' }}>
+              <Table sx={{ minWidth: 1200 }} aria-label="saved driver tokens table">
+                <TableHead sx={{ backgroundColor: '#f1f5f9' }}>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Issued At</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Driver Name</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Phone Number</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Reference No.</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Violation</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Amount</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Token Code</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Access Token</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {tokenHistory.map((row) => (
+                    <TableRow
+                      key={`${row.accessToken}-${row.savedAt}`}
+                      sx={{
+                        '&:last-child td, &:last-child th': { border: 0 },
+                        '&:hover': { backgroundColor: '#f8fafc' },
+                      }}
+                    >
+                      <TableCell sx={{ color: '#64748b', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+                        {formatIssuedAt(row.savedAt)}
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'medium' }}>{row.driverName || 'N/A'}</TableCell>
+                      <TableCell sx={{ color: '#475569' }}>{row.phoneNumber || 'N/A'}</TableCell>
+                      <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                        {row.referenceNumber || 'N/A'}
+                      </TableCell>
+                      <TableCell sx={{ maxWidth: 220 }}>{row.wrongDid || 'N/A'}</TableCell>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight="medium">
+                          {formatAmount(row.amount)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+                        {row.tokenCode || 'N/A'}
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          fontFamily: 'monospace',
+                          fontSize: '0.8rem',
+                          wordBreak: 'break-all',
+                          maxWidth: 420,
+                        }}
+                      >
+                        {row.accessToken}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Box>
+          )}
+        </TableContainer>
+
+        <TableContainer component={Paper} elevation={3} sx={{ borderRadius: 3, overflow: 'hidden', mb: 4 }}>
+          <Box sx={{ backgroundColor: '#14532d', color: 'white', p: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="h6" fontWeight="medium">
+              Payment Notifications
+            </Typography>
+          </Box>
+
+          {notificationHistory.length === 0 ? (
+            <Alert severity="info" sx={{ m: 2 }}>
+              No payment notifications yet.
+            </Alert>
+          ) : (
+            <Box sx={{ width: '100%', backgroundColor: 'white', overflowX: 'auto' }}>
+              <Table sx={{ minWidth: 1100 }} aria-label="officer payment notifications table">
+                <TableHead sx={{ backgroundColor: '#f1f5f9' }}>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Time Paid</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Driver Name</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Phone</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Reference No.</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Amount</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Vehicle No.</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Message</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {notificationHistory.map((row) => (
+                    <TableRow
+                      key={`${row.referenceNumber}-${row.paidAt}`}
+                      sx={{
+                        '&:last-child td, &:last-child th': { border: 0 },
+                        '&:hover': { backgroundColor: '#f8fafc' },
+                      }}
+                    >
+                      <TableCell sx={{ color: '#64748b', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+                        {formatIssuedAt(row.paidAt)}
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'medium' }}>{row.driverName || 'N/A'}</TableCell>
+                      <TableCell sx={{ color: '#475569' }}>{row.phoneNumber || 'N/A'}</TableCell>
+                      <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                        {row.referenceNumber || 'N/A'}
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'medium' }}>{formatAmount(row.amount)}</TableCell>
+                      <TableCell sx={{ color: '#475569' }}>{row.vehicleNumber || 'N/A'}</TableCell>
+                      <TableCell sx={{ maxWidth: 420, whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                        {row.message || 'Fine payment received.'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Box>
+          )}
+        </TableContainer>
 
         <TableContainer component={Paper} elevation={3} sx={{ borderRadius: 3, overflow: 'hidden', mb: 4 }}>
           <Box sx={{ backgroundColor: '#1e293b', color: 'white', p: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
