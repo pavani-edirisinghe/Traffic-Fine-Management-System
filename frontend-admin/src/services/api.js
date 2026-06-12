@@ -1,10 +1,9 @@
 import axios from 'axios';
 import { getAccessToken } from './auth';
 
-// The base URL of Kavithma's Spring Boot server
 const API_BASE_URL = 'http://localhost:8080/api/v1'; 
+const ROOT_API_URL = 'http://localhost:8080/api'; 
 
-// Create an Axios instance
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -63,13 +62,41 @@ export const me = async () => {
   return response.data;
 };
 
-// The function to fetch all fines for the Admin Dashboard
 export const getAllFines = async () => {
   try {
     const response = await apiClient.get('/fines');
-    return response.data; // This returns the JSON array from the backend
+    return response.data; 
   } catch (error) {
     console.error("API Error fetching fines:", error);
     throw error;
   }
+};
+
+export const issueFine = async (driverId, officerId, amount, description) => {
+  const response = await apiClient.post(`${ROOT_API_URL}/fines/issue`, null, {
+    params: { driverId, officerId, amount, description }
+  });
+  return response.data;
+};
+
+export const getDriverFines = async (driverId) => {
+  const response = await apiClient.get(`${ROOT_API_URL}/fines/driver/${driverId}`);
+  return response.data;
+};
+
+export const payFine = async (fineId, amount, method) => {
+  const response = await apiClient.post(`${ROOT_API_URL}/payments/${fineId}`, null, {
+    params: { amount, method }
+  });
+  return response.data;
+};
+
+export const getOfficerNotifications = async (officerId) => {
+  const response = await apiClient.get(`${ROOT_API_URL}/notifications/officer/${officerId}`);
+  return response.data;
+};
+
+export const markNotificationAsRead = async (notificationId) => {
+  const response = await apiClient.put(`${ROOT_API_URL}/notifications/${notificationId}/read`);
+  return response.data;
 };

@@ -1,167 +1,136 @@
-import { useState } from 'react';
-import { 
-  Box, Card, CardContent, Typography, TextField, 
-  Button, MenuItem, FormControl, InputLabel, Select, Divider 
-} from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { mockFines } from '../data/mockData';
-import { getOfficerProfile } from '../services/auth';
-import LogoutButton from '../components/LogoutButton';
+import { useState, useEffect } from 'react';
+import { issueFine, getDrivers, me } from '../services/api';
 
 export default function IssueTicket() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const currentOfficer = location.state?.currentOfficer || getOfficerProfile();
+  const [drivers, setDrivers] = useState([]);
+  const [selectedDriverId, setSelectedDriverId] = useState('');
+  const [amount, setAmount] = useState('');
+  const [description, setDescription] = useState('');
+  const [officer, setOfficer] = useState(null);
+  const [message, setMessage] = useState({ type: '', text: '' });
+  const [loading, setLoading] = useState(false);
 
-  const [newTicket, setNewTicket] = useState({ 
-    categoryIdentifier: '', 
-    wrongDid: '',
-    amount: '',
-    vehicleNumber: '', 
-    driverLicense: ''  
-  });
-
-  // Security Check
-  if (!currentOfficer) {
-    return <Navigate to="/login" replace />;
-  }
-
-  const violationCategories = [
-    { id: 'SPEEDING_OVER_20', name: 'Speeding' },
-    { id: 'ILLEGAL_PARKING', name: 'Illegal Parking' },
-    { id: 'NO_LICENSE', name: 'Driving Without License' },
-    { id: 'RECKLESS_DRIVING', name: 'Reckless Driving' }
-  ];
-
-  const handleIssueTicket = (e) => {
-    e.preventDefault();
-    
-    const categoryName = violationCategories.find(c => c.id === newTicket.categoryIdentifier)?.name || 'Unknown';
-
-    const newFineObject = {
-      referenceNumber: `FIN-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-      officerId: currentOfficer.id,
-      categoryIdentifier: newTicket.categoryIdentifier,
-      categoryName: newTicket.wrongDid || categoryName,
-      amount: Number(newTicket.amount),
-      vehicleNumber: newTicket.vehicleNumber.toUpperCase(),
-      driverLicense: newTicket.driverLicense.toUpperCase(),
-      status: "PENDING",
-      district: currentOfficer.district,
-      dateIssued: new Date().toISOString(),
-      datePaid: null
+  useEffect(() => {
+    // Fetch logged-in officer details and list of drivers
+    const fetchData = async () => {
+      try {
+        const currentUser = await me();
+        setOfficer(currentUser);
+        
+        const driversList = await getDrivers();
+        setDrivers(driversList);
+      } catch (error) {
+        console.error("Error fetching initial data:", error);
+        setMessage({ type: 'error', text: 'Failed to load driver data.' });
+      }
     };
-
-    // Because we are using mock data, we mutate the array directly so it survives the page change
-    mockFines.unshift(newFineObject);
     
-    // Navigate back to the dashboard and pass the officer back so they stay logged in
-    navigate('/officer', { state: { currentOfficer } });
+    fetchData();
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage({ type: '', text: '' });
+
+    if (!officer || !officer.id) {
+      setMessage({ type: 'error', text: 'Officer information not found. Please log in again.' });
+      setLoading(false);
+      return;
+    }
+
+    try {
+      await issueFine(selectedDriverId, officer.id, parseFloat(amount), description);
+      setMessage({ type: 'success', text: 'Traffic fine issued successfully!' });
+      
+      // Reset form
+      setSelectedDriverId('');
+      setAmount('');
+      setDescription('');
+    } catch (error) {
+      console.error("Error issuing fine:", error);
+      setMessage({ 
+        type: 'error', 
+        text: error.response?.data?.message || error.response?.data || 'Failed to issue the fine. Please try again.' 
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <Box sx={{ minHeight: '80vh', backgroundColor: '#f8fafc', p: 4, display: 'flex', justifyContent: 'center' }}>
-      <Box sx={{ width: '100%', maxWidth: 600 }}>
-        
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-          <Button 
-            startIcon={<ArrowBackIcon />} 
-            onClick={() => navigate('/officer', { state: { currentOfficer } })}
-            sx={{ fontWeight: 'bold' }}
+    <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-md mt-10">
+      <h2 className="text-2xl font-bold mb-6 text-gray-800">Issue New Traffic Fine</h2>
+      
+      {message.text && (
+        <div className={`p-4 mb-6 rounded-md ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+          {message.text}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label htmlFor="driver" className="block text-sm font-medium text-gray-700 mb-1">
+            Select Driver
+          </label>
+          <select
+            id="driver"
+            value={selectedDriverId}
+            onChange={(e) => setSelectedDriverId(e.target.value)}
+            required
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
           >
-            Back to Dashboard
-          </Button>
-          <LogoutButton sx={{ color: '#0f172a', borderColor: '#cbd5e1' }} />
-        </Box>
+            <option value="" disabled>-- Select a Driver --</option>
+            {drivers.map((driver) => (
+              <option key={driver.id} value={driver.id}>
+                {driver.displayName || driver.username} {driver.phoneNumber ? `(${driver.phoneNumber})` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        <Card elevation={4} sx={{ borderRadius: 3 }}>
-          <Box sx={{ backgroundColor: '#1976d2', color: 'white', p: 2 }}>
-            <Typography variant="h5" fontWeight="bold">Issue New Traffic Fine</Typography>
-            <Typography variant="body2" sx={{ opacity: 0.9 }}>
-              Officer: {currentOfficer.name} ({currentOfficer.id})
-            </Typography>
-          </Box>
-          
-          <CardContent sx={{ p: 4 }}>
-            <form onSubmit={handleIssueTicket}>
-              
-              <Typography variant="subtitle2" color="textSecondary" sx={{ mb: 2 }}>VIOLATION DETAILS</Typography>
-              <TextField
-                fullWidth
-                label="Wrong Did / Violation Description"
-                variant="outlined"
-                required
-                sx={{ mb: 2 }}
-                value={newTicket.wrongDid}
-                onChange={(e) => setNewTicket({ ...newTicket, wrongDid: e.target.value })}
-              />
-              
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel>Violation Category *</InputLabel>
-                <Select
-                  value={newTicket.categoryIdentifier}
-                  label="Violation Category *"
-                  required
-                  onChange={(e) => setNewTicket({ ...newTicket, categoryIdentifier: e.target.value })}
-                >
-                  {violationCategories.map((cat) => (
-                    <MenuItem key={cat.id} value={cat.id}>{cat.name}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+        <div>
+          <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">
+            Fine Amount (LKR)
+          </label>
+          <input
+            type="number"
+            id="amount"
+            min="0"
+            step="0.01"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            required
+            placeholder="e.g. 1500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
 
-              <TextField
-                fullWidth
-                label="Fine Amount (LKR)"
-                type="number"
-                variant="outlined"
-                required
-                sx={{ mb: 3 }}
-                value={newTicket.amount}
-                onChange={(e) => setNewTicket({ ...newTicket, amount: e.target.value })}
-              />
+        <div>
+          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+            Violation Description
+          </label>
+          <textarea
+            id="description"
+            rows="4"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            required
+            placeholder="Describe the traffic violation..."
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          ></textarea>
+        </div>
 
-              <Divider sx={{ mb: 3 }} />
-              <Typography variant="subtitle2" color="textSecondary" sx={{ mb: 2 }}>VEHICLE & DRIVER INFO</Typography>
-
-              <TextField
-                fullWidth
-                label="Vehicle Registration No."
-                placeholder="e.g. WP CAA-1234"
-                variant="outlined"
-                required
-                sx={{ mb: 2 }}
-                value={newTicket.vehicleNumber}
-                onChange={(e) => setNewTicket({ ...newTicket, vehicleNumber: e.target.value })}
-              />
-
-              <TextField
-                fullWidth
-                label="Driver License Number"
-                placeholder="e.g. B1234567"
-                variant="outlined"
-                required
-                sx={{ mb: 3 }}
-                value={newTicket.driverLicense}
-                onChange={(e) => setNewTicket({ ...newTicket, driverLicense: e.target.value })}
-              />
-
-              <Button 
-                type="submit"
-                variant="contained" 
-                color="primary"
-                fullWidth
-                size="large"
-                sx={{ py: 1, fontWeight: 'bold', fontSize: '1rem', borderRadius: 2 }}
-              >
-                Submit & Issue Ticket
-              </Button>
-
-            </form>
-          </CardContent>
-        </Card>
-      </Box>
-    </Box>
+        <button
+          type="submit"
+          disabled={loading}
+          className={`w-full py-2 px-4 rounded-md text-white font-medium ${
+            loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+          } transition-colors`}
+        >
+          {loading ? 'Processing...' : 'Issue Fine'}
+        </button>
+      </form>
+    </div>
   );
 }
