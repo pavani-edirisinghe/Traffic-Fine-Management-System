@@ -18,6 +18,7 @@ export default function ManageOfficers() {
   const [loadingOfficers, setLoadingOfficers] = useState(false);
   const [lastCreatedOfficer, setLastCreatedOfficer] = useState(null);
   const [editingOfficer, setEditingOfficer] = useState(null);
+  const [lastActionWasEdit, setLastActionWasEdit] = useState(false);
 
   useEffect(() => {
     const loadOfficers = async () => {
@@ -45,6 +46,7 @@ export default function ManageOfficers() {
     e.preventDefault();
     setSubmitting(true);
     setErrorMessage('');
+    const wasEditing = Boolean(editingOfficer);
 
     try {
       const created = editingOfficer
@@ -58,6 +60,7 @@ export default function ManageOfficers() {
             password: formData.password,
           });
       setLastCreatedOfficer(created);
+      setLastActionWasEdit(wasEditing);
       setSnackbar(true);
       setFormData({ username: '', password: '' });
       setEditingOfficer(null);
@@ -165,8 +168,9 @@ export default function ManageOfficers() {
               <Divider sx={{ mb: 2 }} />
               <Box sx={{ height: 360, width: '100%' }}>
                 <DataGrid
-                  rows={officers.map((officer, index) => ({ id: officer.username || index, ...officer }))}
+                  rows={officers.map((officer, index) => ({ id: officer.id || officer.username || index, ...officer }))}
                   columns={[
+                    { field: 'id', headerName: 'ID', width: 90 },
                     { field: 'username', headerName: 'Username', flex: 1, minWidth: 180 },
                       {
                         field: 'actions',
@@ -205,7 +209,7 @@ export default function ManageOfficers() {
       >
         <Alert onClose={() => setSnackbar(false)} severity="success" sx={{ width: '100%' }}>
           {lastCreatedOfficer
-            ? `${editingOfficer ? 'Officer updated' : 'Officer created'}: ${lastCreatedOfficer.username}. Default password: ${lastCreatedOfficer.temporaryPassword}`
+            ? `${lastActionWasEdit ? 'Officer updated' : 'Officer created'}: ${lastCreatedOfficer.username}. Default password: ${lastCreatedOfficer.temporaryPassword}`
             : 'Officer account generated successfully!'}
         </Alert>
       </Snackbar>

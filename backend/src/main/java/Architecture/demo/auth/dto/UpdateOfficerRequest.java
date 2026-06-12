@@ -2,6 +2,8 @@ package Architecture.demo.auth.dto;
 
 public record UpdateOfficerRequest(
 		String newUsername,
-		String newPassword
+		String newPassword,
+		String displayName,
+		String phoneNumber
 ) {
 }

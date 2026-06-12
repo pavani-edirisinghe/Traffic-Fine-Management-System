@@ -43,10 +43,7 @@ export default function Login() {
         setAuth({ accessToken: token, tokenType: 'Bearer', username: profile.username, role: profile.role, expiresInSeconds: 0 });
 
         const payload = parseJwtPayload(token);
-        const driverCtx = {
-          referenceNumber: payload?.referenceNumber,
-          categoryIdentifier: payload?.categoryIdentifier,
-        };
+        const driverCtx = payload || {};
         setDriverContext(driverCtx);
         navigate('/driver', { state: driverCtx });
         return;

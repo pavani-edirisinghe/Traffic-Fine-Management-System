@@ -42,14 +42,14 @@ public class AdminController {
 	@GetMapping("/officers")
 	public List<UserSummaryResponse> getOfficers() {
 		return userRepository.findAllByRole(Role.OFFICER).stream()
-				.map(user -> new UserSummaryResponse(user.getUsername(), user.getRole()))
+				.map(user -> new UserSummaryResponse(user.getId(), user.getUsername(), user.getDisplayName(), user.getPhoneNumber(), user.getRole()))
 				.toList();
 	}
 
 	@GetMapping("/drivers")
 	public List<UserSummaryResponse> getDrivers() {
 		return userRepository.findAllByRole(Role.DRIVER).stream()
-				.map(user -> new UserSummaryResponse(user.getUsername(), user.getRole()))
+				.map(user -> new UserSummaryResponse(user.getId(), user.getUsername(), user.getDisplayName(), user.getPhoneNumber(), user.getRole()))
 				.toList();
 	}
 
@@ -68,7 +68,7 @@ public class AdminController {
 
 		AppUser officer = new AppUser(username, passwordEncoder.encode(temporaryPassword), Role.OFFICER);
 		userRepository.save(officer);
-		return new CreateOfficerResponse(officer.getUsername(), temporaryPassword);
+		return new CreateOfficerResponse(officer.getId(), officer.getUsername(), temporaryPassword);
 	}
 
 	@PutMapping("/officers/{username}")
@@ -92,12 +92,18 @@ public class AdminController {
 		}
 
 		officer.setUsername(updatedUsername);
+		if (!isBlank(request.displayName())) {
+			officer.setDisplayName(request.displayName().trim());
+		}
+		if (!isBlank(request.phoneNumber())) {
+			officer.setPhoneNumber(request.phoneNumber().trim());
+		}
 		if (updatedPassword != null) {
 			officer.setPassword(passwordEncoder.encode(updatedPassword));
 		}
 		userRepository.save(officer);
 
-		return new CreateOfficerResponse(officer.getUsername(), updatedPassword);
+		return new CreateOfficerResponse(officer.getId(), officer.getUsername(), updatedPassword);
 	}
 
 	@DeleteMapping("/officers/{username}")

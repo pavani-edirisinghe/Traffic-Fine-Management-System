@@ -16,6 +16,7 @@ export default function IssueTicket() {
 
   const [newTicket, setNewTicket] = useState({ 
     categoryIdentifier: '', 
+    wrongDid: '',
     amount: '',
     vehicleNumber: '', 
     driverLicense: ''  
@@ -42,7 +43,7 @@ export default function IssueTicket() {
       referenceNumber: `FIN-2026-${Math.floor(1000 + Math.random() * 9000)}`,
       officerId: currentOfficer.id,
       categoryIdentifier: newTicket.categoryIdentifier,
-      categoryName: categoryName,
+      categoryName: newTicket.wrongDid || categoryName,
       amount: Number(newTicket.amount),
       vehicleNumber: newTicket.vehicleNumber.toUpperCase(),
       driverLicense: newTicket.driverLicense.toUpperCase(),
@@ -86,6 +87,15 @@ export default function IssueTicket() {
             <form onSubmit={handleIssueTicket}>
               
               <Typography variant="subtitle2" color="textSecondary" sx={{ mb: 2 }}>VIOLATION DETAILS</Typography>
+              <TextField
+                fullWidth
+                label="Wrong Did / Violation Description"
+                variant="outlined"
+                required
+                sx={{ mb: 2 }}
+                value={newTicket.wrongDid}
+                onChange={(e) => setNewTicket({ ...newTicket, wrongDid: e.target.value })}
+              />
               
               <FormControl fullWidth sx={{ mb: 2 }}>
                 <InputLabel>Violation Category *</InputLabel>

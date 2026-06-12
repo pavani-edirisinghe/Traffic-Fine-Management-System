@@ -43,6 +43,11 @@ export const deleteOfficer = async (username) => {
   await apiClient.delete(`/admin/officers/${encodeURIComponent(username)}`);
 };
 
+export const issueDriverToken = async (payload) => {
+  const response = await apiClient.post('/officer/driver-token', payload);
+  return response.data;
+};
+
 export const getOfficers = async () => {
   const response = await apiClient.get('/admin/officers');
   return response.data;

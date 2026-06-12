@@ -68,7 +68,10 @@ export default function Dashboard() {
   ];
 
   const accountColumns = [
+    { field: 'id', headerName: 'ID', width: 90 },
     { field: 'username', headerName: 'Username', flex: 1, minWidth: 180 },
+    { field: 'displayName', headerName: 'Name', flex: 1, minWidth: 160 },
+    { field: 'phoneNumber', headerName: 'Phone', width: 140 },
   ];
 
   return (
