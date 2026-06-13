@@ -1,95 +1,51 @@
 import 'package:flutter/material.dart';
 import '../../data/repositories/auth_repository.dart';
-import '../../domain/models/user.dart';
+import '../../data/repositories/fine_repository.dart';
+import '../../domain/models/traffic_fine.dart';
+import '../../config/dependencies/service_locator.dart';
 
 class AuthProvider extends ChangeNotifier {
-  AuthProvider({required AuthRepository authRepository})
-    : _authRepository = authRepository {
-    _initialize();
-  }
-  final AuthRepository _authRepository;
+  final AuthRepository _authRepository = getIt<AuthRepository>();
+  final FineRepository _fineRepository = getIt<FineRepository>();
 
-  User? _user;
-  String? _error;
   bool _isLoading = false;
   bool _isAuthenticated = false;
+  String? _error;
+  TrafficFine? _currentFine;
 
-  // Getters
-  User? get user => _user;
-  String? get error => _error;
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _isAuthenticated;
+  String? get error => _error;
+  TrafficFine? get currentFine => _currentFine;
 
-  Future<void> _initialize() async {
-    await _authRepository.initialize();
-    await _authRepository.restoreSession();
-    _isAuthenticated = _authRepository.isAuthenticated();
-    _user = _authRepository.getCachedUser();
-    notifyListeners();
-  }
-
-  Future<bool> login({required String email, required String password}) async {
+  Future<bool> loginWithReference(String referenceOrToken) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      _user = await _authRepository.login(email: email, password: password);
-      _isAuthenticated = true;
-      _isLoading = false;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _error = e.toString();
-      _isLoading = false;
-      notifyListeners();
-      return false;
-    }
-  }
-
-  Future<bool> register({
-    required String licenseNumber,
-    required String email,
-    required String password,
-    required String phoneNumber,
-    required String firstName,
-    required String lastName,
-  }) async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
-    try {
-      _user = await _authRepository.register(
-        licenseNumber: licenseNumber,
-        email: email,
-        password: password,
-        phoneNumber: phoneNumber,
-        firstName: firstName,
-        lastName: lastName,
+      // Look up the fine using the provided reference number
+      final fine = await _fineRepository.validateFine(
+        referenceNumber: referenceOrToken,
       );
-      _isAuthenticated = true;
+      
+      _currentFine = fine;
+      _isAuthenticated = true; 
       _isLoading = false;
       notifyListeners();
       return true;
     } catch (e) {
-      _error = e.toString();
+      _error = 'Could not find fine. Please check the reference number.';
       _isLoading = false;
       notifyListeners();
       return false;
     }
   }
 
-  Future<void> logout() async {
-    await _authRepository.logout();
-    _user = null;
+  void logout() {
     _isAuthenticated = false;
-    _error = null;
-    notifyListeners();
-  }
-
-  void clearError() {
-    _error = null;
+    _currentFine = null;
+    _authRepository.logout();
     notifyListeners();
   }
 }

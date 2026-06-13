@@ -33,7 +33,7 @@ void setupServiceLocator() {
 
   // Providers
   getIt.registerSingleton<AuthProvider>(
-    AuthProvider(authRepository: getIt<AuthRepository>()),
+    AuthProvider(), // <-- FIXED: Removed the arguments here
   );
   getIt.registerSingleton<PaymentProvider>(
     PaymentProvider(
