@@ -1,6 +1,8 @@
 export const AUTH_STORAGE_KEY = 'tfms.auth';
 export const OFFICER_PROFILE_KEY = 'tfms.officerProfile';
 export const DRIVER_CONTEXT_KEY = 'tfms.driverContext';
+const OFFICER_TOKEN_HISTORY_PREFIX = 'tfms.officerTokenHistory';
+const OFFICER_NOTIFICATION_PREFIX = 'tfms.officerNotifications';
 
 export function getAuth() {
   try {
@@ -28,6 +30,85 @@ export function clearAuth() {
   localStorage.removeItem(AUTH_STORAGE_KEY);
   localStorage.removeItem(OFFICER_PROFILE_KEY);
   localStorage.removeItem(DRIVER_CONTEXT_KEY);
+}
+
+function getOfficerTokenHistoryKey(officerId) {
+  return `${OFFICER_TOKEN_HISTORY_PREFIX}.${officerId || 'unknown'}`;
+}
+
+export function getOfficerTokenHistory(officerId) {
+  try {
+    const raw = localStorage.getItem(getOfficerTokenHistoryKey(officerId));
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function setOfficerTokenHistory(officerId, history) {
+  localStorage.setItem(getOfficerTokenHistoryKey(officerId), JSON.stringify(history));
+  return history;
+}
+
+export function appendOfficerTokenHistory(officerId, tokenRecord) {
+  const currentHistory = getOfficerTokenHistory(officerId);
+  const nextHistory = [tokenRecord, ...currentHistory];
+  setOfficerTokenHistory(officerId, nextHistory);
+  return nextHistory;
+}
+
+function getStorageRecordsByPrefix(prefix) {
+  const records = [];
+  for (let index = 0; index < localStorage.length; index += 1) {
+    const key = localStorage.key(index);
+    if (key && key.startsWith(prefix)) {
+      records.push({ key, value: localStorage.getItem(key) });
+    }
+  }
+  return records;
+}
+
+export function resolveIssuedDriverToken(inputToken) {
+  const normalizedToken = (inputToken || '').trim();
+  if (!normalizedToken) {
+    return null;
+  }
+
+  const tokenHistoryEntries = getStorageRecordsByPrefix(OFFICER_TOKEN_HISTORY_PREFIX);
+  for (const entry of tokenHistoryEntries) {
+    try {
+      const history = entry.value ? JSON.parse(entry.value) : [];
+      const matchedRecord = history.find(
+        (record) => record.tokenCode === normalizedToken || record.accessToken === normalizedToken
+      );
+      if (matchedRecord?.accessToken) {
+        return matchedRecord.accessToken;
+      }
+    } catch {
+      // Ignore malformed storage entries and continue searching.
+    }
+  }
+
+  return normalizedToken;
+}
+
+export function getOfficerNotifications(officerId) {
+  try {
+    const raw = localStorage.getItem(`${OFFICER_NOTIFICATION_PREFIX}.${officerId || 'unknown'}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function appendOfficerNotification(officerId, notificationRecord) {
+  const currentHistory = getOfficerNotifications(officerId);
+  const nextHistory = [notificationRecord, ...currentHistory];
+  localStorage.setItem(
+    `${OFFICER_NOTIFICATION_PREFIX}.${officerId || 'unknown'}`,
+    JSON.stringify(nextHistory)
+  );
+  return nextHistory;
 }
 
 export function getAccessToken() {

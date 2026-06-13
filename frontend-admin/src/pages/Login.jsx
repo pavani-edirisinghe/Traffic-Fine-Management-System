@@ -10,7 +10,7 @@ import EmailIcon from '@mui/icons-material/Email';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import { mockOfficers } from '../data/mockData';
 import { login, me } from '../services/api';
-import { clearAuth, parseJwtPayload, setAuth, setDriverContext, setOfficerProfile } from '../services/auth';
+import { clearAuth, parseJwtPayload, resolveIssuedDriverToken, setAuth, setDriverContext, setOfficerProfile } from '../services/auth';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -31,22 +31,21 @@ export default function Login() {
       clearAuth();
 
       if (isDriver) {
-        const token = input1.trim();
-        if (!token) {
+        const tokenInput = input1.trim();
+        if (!tokenInput) {
           alert('Please paste the access token given by the officer.');
           return;
         }
 
-        // Temporarily store token so api client can call /auth/me
-        setAuth({ accessToken: token, tokenType: 'Bearer', username: '', role: 'DRIVER', expiresInSeconds: 0 });
-        const profile = await me();
-        setAuth({ accessToken: token, tokenType: 'Bearer', username: profile.username, role: profile.role, expiresInSeconds: 0 });
+        const resolvedToken = resolveIssuedDriverToken(tokenInput);
 
-        const payload = parseJwtPayload(token);
-        const driverCtx = {
-          referenceNumber: payload?.referenceNumber,
-          categoryIdentifier: payload?.categoryIdentifier,
-        };
+        // Temporarily store token so api client can call /auth/me
+        setAuth({ accessToken: resolvedToken, tokenType: 'Bearer', username: '', role: 'DRIVER', expiresInSeconds: 0 });
+        const profile = await me();
+        setAuth({ accessToken: resolvedToken, tokenType: 'Bearer', username: profile.username, role: profile.role, expiresInSeconds: 0 });
+
+        const payload = parseJwtPayload(resolvedToken);
+        const driverCtx = payload || {};
         setDriverContext(driverCtx);
         navigate('/driver', { state: driverCtx });
         return;
@@ -190,39 +189,9 @@ export default function Login() {
             </Button>
 
 
-{/*             
-            {process.env.NODE_ENV === 'development' && (
-              <Button
-                fullWidth
-                variant="outlined"
-                sx={{ mt: 2 }}
-                onClick={() => {
-                  setAuth({
-                    accessToken: 'dev-token',
-                    username: 'developer',
-                    role: 'ADMIN',
-                    tokenType: 'Bearer',
-                    expiresInSeconds: 3600
-                  });
-                  navigate('/admin');
-                }}
-              >
-                Dev Login (Admin)
-              </Button>
-            )} */}
-
-
-
-
-
-            <Button
-              fullWidth
-              variant="text"
-              onClick={() => navigate('/signup')}
-              sx={{ mt: 1.5, fontWeight: 'bold' }}
-            >
-              Create an account
-            </Button>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, textAlign: 'center' }}>
+              Officer accounts are created by admins. Drivers sign in with an officer-issued token.
+            </Typography>
           </form>
 
         </CardContent>
