@@ -1,124 +1,112 @@
-import { useState } from 'react';
-import { Box, Typography, Card, CardContent, TextField, Button, Grid, Snackbar, Alert, Divider } from '@mui/material';
+import { useState, useEffect } from 'react';
+// REMOVE the duplicate import
+import { Box, Typography, Card, CardContent, TextField, Button, Grid, Snackbar, Alert, Table, TableBody, TableCell, TableHead, TableRow, Paper } from '@mui/material';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import { createOfficer, getOfficers } from '../services/api';
 
 export default function ManageOfficers() {
   const [formData, setFormData] = useState({
-    fullName: '',
-    badgeId: '',
-    email: '',
-    station: ''
+    username: '', password: '', fullName: '', badgeId: '', phoneNumber: '', district: ''
   });
+  const [officers, setOfficers] = useState([]);
   const [openSnackbar, setSnackbar] = useState(false);
 
-  // ─── Input Handler ───
+  useEffect(() => {
+    fetchOfficers();
+  }, []);
+
+  const fetchOfficers = async () => {
+    try {
+      const data = await getOfficers();
+      setOfficers(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Failed to load officers", err);
+    }
+  };
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // ─── Submit Handler ───
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Later, this is where we will send the data to the Spring Boot backend
-    console.log("Registering Officer:", formData);
-    
-    // Show success message and clear form
-    setSnackbar(true);
-    setFormData({ fullName: '', badgeId: '', email: '', station: '' });
+    try {
+      await createOfficer(formData);
+      setSnackbar(true);
+      setFormData({ username: '', password: '', fullName: '', badgeId: '', phoneNumber: '', district: '' });
+      fetchOfficers();
+    } catch (error) {
+      console.error("Failed to register officer", error);
+    }
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Manage Officers</Typography>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, p: 3 }}>
+      <Typography variant="h4">Manage Officers</Typography>
 
-      <Grid container spacing={3}>
-        {/* Registration Form Column */}
-        <Grid item xs={12} md={6}>
-          <Card elevation={2}>
-            <Box sx={{ bgcolor: '#1976d2', color: 'white', p: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-              <PersonAddIcon />
-              <Typography variant="h6">Register New Officer</Typography>
-            </Box>
-            <CardContent>
-              <form onSubmit={handleSubmit}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
-                  <TextField 
-                    label="Full Name" 
-                    name="fullName"
-                    value={formData.fullName}
-                    onChange={handleChange}
-                    required 
-                    fullWidth 
-                  />
-                  <TextField 
-                    label="Badge ID / Service No." 
-                    name="badgeId"
-                    value={formData.badgeId}
-                    onChange={handleChange}
-                    required 
-                    fullWidth 
-                  />
-                  <TextField 
-                    label="Official Email" 
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required 
-                    fullWidth 
-                  />
-                  <TextField 
-                    label="Assigned Police Station" 
-                    name="station"
-                    value={formData.station}
-                    onChange={handleChange}
-                    required 
-                    fullWidth 
-                  />
-                  <Button 
-                    type="submit" 
-                    variant="contained" 
-                    size="large" 
-                    sx={{ mt: 2, py: 1.5, fontWeight: 'bold' }}
-                  >
-                    Generate Officer Account
-                  </Button>
-                </Box>
-              </form>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Instructions / Recent Column */}
-        <Grid item xs={12} md={6}>
-          <Card elevation={2} sx={{ height: '100%' }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>Security Protocol</Typography>
-              <Divider sx={{ mb: 2 }} />
-              <Typography variant="body2" color="text.secondary" paragraph>
-                1. Verify the officer's credentials before creating an account.
-              </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                2. Generating an account will automatically send a temporary password to the provided official email address.
-              </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                3. The officer will be forced to change this password upon their first login to the mobile application or officer portal.
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
+      <Card>
+  <CardContent>
+    <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+      <PersonAddIcon /> Register New Officer
+    </Typography>
+    <form onSubmit={handleSubmit}>
+      <Grid container spacing={2}>
+        {/* Mapping fields explicitly to labels to avoid string manipulation errors */}
+        {[
+          { key: 'username', label: 'Username' },
+          { key: 'password', label: 'Password' },
+          { key: 'fullName', label: 'Full Name' },
+          { key: 'badgeId', label: 'Badge ID' },
+          { key: 'phoneNumber', label: 'Phone Number' },
+          { key: 'district', label: 'District' }
+        ].map((field) => (
+          <Grid key={field.key} size={{ xs: 12, md: 4 }}>
+            <TextField 
+              fullWidth 
+              label={field.label} 
+              name={field.key} 
+              type={field.key === 'password' ? 'password' : 'text'}
+              value={formData[field.key] || ''} 
+              onChange={handleChange} 
+              required 
+            />
+          </Grid>
+        ))}
       </Grid>
+      <Button type="submit" variant="contained" sx={{ mt: 3 }}>
+        Generate Officer Account
+      </Button>
+    </form>
+  </CardContent>
+</Card>
 
-      {/* Success Notification */}
-      <Snackbar 
-        open={openSnackbar} 
-        autoHideDuration={4000} 
-        onClose={() => setSnackbar(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert onClose={() => setSnackbar(false)} severity="success" sx={{ width: '100%' }}>
-          Officer account generated successfully!
-        </Alert>
+      <Paper sx={{ mt: 3 }}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Full Name</TableCell>
+              <TableCell>Badge ID</TableCell>
+              <TableCell>Username</TableCell>
+              <TableCell>District</TableCell>
+              <TableCell>Phone</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {officers.map((o) => (
+              <TableRow key={o.id}>
+                <TableCell>{o.fullName || o.displayName || 'N/A'}</TableCell>
+                <TableCell>{o.badgeId || 'N/A'}</TableCell>
+                <TableCell>{o.username}</TableCell>
+                <TableCell>{o.district || 'N/A'}</TableCell>
+                <TableCell>{o.phoneNumber || 'N/A'}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Paper>
+
+      <Snackbar open={openSnackbar} autoHideDuration={4000} onClose={() => setSnackbar(false)}>
+        <Alert severity="success">Officer account generated successfully!</Alert>
       </Snackbar>
     </Box>
   );
