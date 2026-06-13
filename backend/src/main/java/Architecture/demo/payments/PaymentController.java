@@ -1,6 +1,5 @@
 package Architecture.demo.payments;
 
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,13 +13,11 @@ public class PaymentController {
         this.paymentService = paymentService;
     }
 
-    @PreAuthorize("hasRole('DRIVER')")
     @PostMapping("/{fineId}")
-    public ResponseEntity<?> payFine(@PathVariable Long fineId, 
-                                     @RequestParam Double amount, 
-                                     @RequestParam String method) {
+    public ResponseEntity<?> payFine(@PathVariable Long fineId,
+                                     @RequestParam(defaultValue = "ONLINE") String method) {
         try {
-            Payment payment = paymentService.processPayment(fineId, amount, method);
+            Payment payment = paymentService.processPayment(fineId, method);
             return ResponseEntity.ok(payment);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());

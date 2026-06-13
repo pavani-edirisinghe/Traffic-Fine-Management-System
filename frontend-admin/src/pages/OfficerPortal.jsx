@@ -90,18 +90,20 @@ export default function OfficerPortal() {
     setGeneratedToken(null);
 
     try {
-      const data = await issueDriverToken(driverForm);
+      const { driverToken, fine } = await issueDriverToken(driverForm);
       const tokenCode = crypto.randomUUID().replace(/-/g, '').slice(0, 15).toUpperCase();
       const nextRecord = {
-        ...data,
+        ...driverToken,
         ...driverForm,
+        fineId: fine?.id,
+        referenceNumber: fine?.referenceNumber,
         tokenCode,
         officerId: currentOfficer.id,
         officerName: currentOfficer.name,
         savedAt: new Date().toISOString(),
       };
       setTokenHistory(appendOfficerTokenHistory(currentOfficer.id, nextRecord));
-      setGeneratedToken({ ...data, tokenCode });
+      setGeneratedToken({ ...driverToken, tokenCode });
       setDriverForm(INITIAL_FORM_STATE);
     } catch (error) {
       setTokenError(error?.response?.data?.message || 'Unable to generate driver token.');
