@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../config/theme/app_theme.dart';
+import '../../../config/dependencies/service_locator.dart';
+import '../../providers/auth_provider.dart';
 
 class PaymentSuccessScreen extends StatelessWidget {
   const PaymentSuccessScreen({Key? key, required this.paymentId})
@@ -104,8 +106,12 @@ class PaymentSuccessScreen extends StatelessWidget {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () => context.go('/home'),
-                          child: const Text('Go Home'),
+                          onPressed: () {
+                            // Clear auth so they have to enter a new reference next time
+                            getIt<AuthProvider>().logout();
+                            context.go('/login');
+                          },
+                          child: const Text('Pay Another Fine'),
                         ),
                       ),
                       const SizedBox(height: 16),
