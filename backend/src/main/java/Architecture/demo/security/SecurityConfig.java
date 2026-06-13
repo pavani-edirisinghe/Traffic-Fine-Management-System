@@ -22,64 +22,68 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 public class SecurityConfig {
-	@Bean
-	public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter)
-			throws Exception {
-		http
-				.csrf(csrf -> csrf.disable())
-			.cors(Customizer.withDefaults())
-				.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-				.authorizeHttpRequests(auth -> auth
-						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-						.requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
-						.requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-						.requestMatchers("/api/v1/officer/**").hasAnyRole("OFFICER", "ADMIN")
-						.requestMatchers("/api/fines/issue").hasRole("OFFICER")
-						.requestMatchers("/api/fines/driver/**").hasRole("DRIVER")
-						.requestMatchers("/api/payments/**").hasRole("DRIVER")
-						.requestMatchers("/api/notifications/**").hasRole("OFFICER")
-						.anyRequest().authenticated()
-				)
-				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
-		return http.build();
-	}
+    @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                   JwtAuthenticationFilter jwtAuthenticationFilter)
+            throws Exception {
+        http
+                .csrf(csrf -> csrf.disable())
+                .cors(Customizer.withDefaults())
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        // Pre-flight CORS requests
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // Public: login only
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                        // Admin-only routes
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        // Officer routes (ADMIN can also access for testing)
+                        .requestMatchers("/api/v1/officer/**").hasAnyRole("OFFICER", "ADMIN")
+                        // Driver routes
+                        .requestMatchers("/api/v1/driver/**").hasRole("DRIVER")
+                        // Everything else requires a valid JWT
+                        .anyRequest().authenticated()
+                )
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
-	@Bean
-	public PasswordEncoder passwordEncoder() {
-		return new BCryptPasswordEncoder();
-	}
+        return http.build();
+    }
 
-	@Bean
-	public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration)
-			throws Exception {
-		return authenticationConfiguration.getAuthenticationManager();
-	}
+    @Bean
+    PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
-	@Bean
-	public CorsConfigurationSource corsConfigurationSource(
-			@Value("${app.cors.allowed-origins}") String allowedOrigins
-	) {
-		List<String> origins = Arrays.stream(allowedOrigins.split(","))
-				.map(String::trim)
-				.filter(s -> !s.isBlank())
-				.toList();
+    @Bean
+    AuthenticationManager authenticationManager(AuthenticationConfiguration config)
+            throws Exception {
+        return config.getAuthenticationManager();
+    }
 
-		CorsConfiguration config = new CorsConfiguration();
-		config.setAllowedOrigins(origins);
-		config.setAllowedMethods(List.of(
-				HttpMethod.GET.name(),
-				HttpMethod.POST.name(),
-				HttpMethod.PUT.name(),
-				HttpMethod.PATCH.name(),
-				HttpMethod.DELETE.name(),
-				HttpMethod.OPTIONS.name()
-		));
-		config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-		config.setAllowCredentials(true);
+    @Bean
+    CorsConfigurationSource corsConfigurationSource(
+            @Value("${app.cors.allowed-origins}") String allowedOrigins) {
+        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isBlank())
+                .toList();
 
-		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-		source.registerCorsConfiguration("/**", config);
-		return source;
-	}
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(origins);
+        config.setAllowedMethods(List.of(
+                HttpMethod.GET.name(),
+                HttpMethod.POST.name(),
+                HttpMethod.PUT.name(),
+                HttpMethod.PATCH.name(),
+                HttpMethod.DELETE.name(),
+                HttpMethod.OPTIONS.name()
+        ));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
 }
