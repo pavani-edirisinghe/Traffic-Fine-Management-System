@@ -189,6 +189,32 @@ export default function Login() {
               Sign In
             </Button>
 
+
+{/*             
+            {process.env.NODE_ENV === 'development' && (
+              <Button
+                fullWidth
+                variant="outlined"
+                sx={{ mt: 2 }}
+                onClick={() => {
+                  setAuth({
+                    accessToken: 'dev-token',
+                    username: 'developer',
+                    role: 'ADMIN',
+                    tokenType: 'Bearer',
+                    expiresInSeconds: 3600
+                  });
+                  navigate('/admin');
+                }}
+              >
+                Dev Login (Admin)
+              </Button>
+            )} */}
+
+
+
+
+
             <Button
               fullWidth
               variant="text"
