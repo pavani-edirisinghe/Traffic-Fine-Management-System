@@ -189,31 +189,6 @@ export default function Login() {
             </Button>
 
 
-{/*             
-            {process.env.NODE_ENV === 'development' && (
-              <Button
-                fullWidth
-                variant="outlined"
-                sx={{ mt: 2 }}
-                onClick={() => {
-                  setAuth({
-                    accessToken: 'dev-token',
-                    username: 'developer',
-                    role: 'ADMIN',
-                    tokenType: 'Bearer',
-                    expiresInSeconds: 3600
-                  });
-                  navigate('/admin');
-                }}
-              >
-                Dev Login (Admin)
-              </Button>
-            )} */}
-
-
-
-
-
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, textAlign: 'center' }}>
               Officer accounts are created by admins. Drivers sign in with an officer-issued token.
             </Typography>
