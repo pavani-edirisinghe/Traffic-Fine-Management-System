@@ -146,12 +146,14 @@ export default function Login() {
               required
               value={input1}
               onChange={(e) => setInput1(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    {isDriver ? <ReceiptLongIcon color="action" /> : <EmailIcon color="action" />}
-                  </InputAdornment>
-                ),
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      {isDriver ? <ReceiptLongIcon color="action" /> : <EmailIcon color="action" />}
+                    </InputAdornment>
+                  ),
+                },
               }}
             />
 
@@ -167,12 +169,14 @@ export default function Login() {
                 required
                 value={input2}
                 onChange={(e) => setInput2(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <LockOutlinedIcon color="action" />
-                    </InputAdornment>
-                  ),
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <LockOutlinedIcon color="action" />
+                      </InputAdornment>
+                    ),
+                  },
                 }}
               />
             ) : null}

@@ -90,6 +90,16 @@ export const markNotificationAsRead = async (notificationId) => {
   return response.data;
 };
 
+// Legacy fine issuance used by IssueTicket.jsx (admin selects driver by ID)
+export const issueFine = async (driverId, officerId, amount, description) => {
+  const response = await apiClient.post(
+    'http://localhost:8080/api/fines/issue',
+    null,
+    { params: { driverId, officerId, amount, description } }
+  );
+  return response.data;
+};
+
 // ── Driver ────────────────────────────────────────────────────────────────────
 export const getDriverFines = async () => {
   const response = await apiClient.get('/driver/fines');
