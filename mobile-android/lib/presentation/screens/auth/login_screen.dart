@@ -21,25 +21,27 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _handleLookup(BuildContext context, AuthProvider authProvider) async {
-    if (_referenceController.text.trim().isEmpty) {
+ 
+  void _handleLookup(BuildContext context) async {
+    final referenceNumber = _referenceController.text.trim();
+    
+    if (referenceNumber.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter the reference number or token')),
+        const SnackBar(content: Text('Please enter a valid reference number')),
       );
       return;
     }
 
-    // Call backend to authenticate / fetch fine details
-    // For now, we mock the success and pass a mock fineId
-    final success = await authProvider.loginWithReference(_referenceController.text.trim());
+    // Call the AuthProvider to log in with the token
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final success = await authProvider.loginAsDriver(referenceNumber);
 
     if (success && context.mounted) {
-      // Assuming your fine ID is returned or derived from the login response
-      final fineId = '1'; // Replace with actual Fine ID from backend
-      context.go('/payment/$fineId');
-    } else if (!success && context.mounted) {
+      // NOTE: Update this routing logic based on how you want to navigate after login
+      context.go('/payment/$referenceNumber');
+    } else if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authProvider.error ?? 'Invalid Reference Number')),
+        SnackBar(content: Text(authProvider.error ?? 'Login Failed')),
       );
     }
   }
@@ -94,7 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           TextField(
                             controller: _referenceController,
                             decoration: InputDecoration(
-                              hintText: 'e.g. DRV-771234567',
+                              hintText: 'e.g. TF-2026-3578C0',
                               prefixIcon: const Icon(Icons.receipt_long),
                               enabled: !authProvider.isLoading,
                             ),
@@ -104,25 +106,21 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 32),
 
                       // Pay Button
+                      // Pay Button
                       SizedBox(
                         height: 56,
                         child: ElevatedButton.icon(
-                          onPressed: authProvider.isLoading
-                              ? null
-                              : () => _handleLookup(context, authProvider),
-                          icon: authProvider.isLoading
-                              ? const SizedBox.shrink()
-                              : const Icon(Icons.search),
-                          label: authProvider.isLoading
-                              ? const CircularProgressIndicator(color: Colors.white)
-                              : Text(
-                                  'Find & Pay',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                          onPressed: () => _handleLookup(context),
+                          icon: const Icon(Icons.search),
+                          label: Text(
+                            'Find & Pay',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
+                      
                       ),
                     ],
                   ),

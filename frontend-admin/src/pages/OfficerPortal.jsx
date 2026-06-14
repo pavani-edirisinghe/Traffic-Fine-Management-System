@@ -177,15 +177,7 @@ export default function OfficerPortal() {
           </Box>
 
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<AddIcon />}
-              onClick={handleGoToIssueTicket}
-              sx={{ fontWeight: 'bold', py: 1.5, px: 3, borderRadius: 2, boxShadow: 3 }}
-            >
-              Issue Fine Report
-            </Button>
+           
             <LogoutButton sx={{ color: '#0f172a', borderColor: '#cbd5e1' }} />
           </Stack>
         </Box>

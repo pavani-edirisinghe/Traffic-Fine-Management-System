@@ -6,9 +6,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/fines")
+@RequestMapping("/api/v1/fines")
 public class FineController {
 
     private final FineRepository fineRepository;
@@ -20,9 +21,9 @@ public class FineController {
     }
 
     @PostMapping("/issue")
-    public ResponseEntity<?> issueFine(@RequestParam Long driverId, 
-                                       @RequestParam Long officerId, 
-                                       @RequestParam Double amount, 
+    public ResponseEntity<?> issueFine(@RequestParam Long driverId,
+                                       @RequestParam Long officerId,
+                                       @RequestParam Double amount,
                                        @RequestParam String description) {
         AppUser driver = userRepository.findById(driverId).orElseThrow(() -> new RuntimeException("Driver not found"));
         AppUser officer = userRepository.findById(officerId).orElseThrow(() -> new RuntimeException("Officer not found"));
@@ -44,5 +45,22 @@ public class FineController {
                 .filter(f -> f.getDriver().getId().equals(driverId))
                 .toList();
         return ResponseEntity.ok(fines);
+    }
+
+    // --- THE BULLETPROOF VALIDATION ENDPOINT ---
+    @GetMapping("/validate")
+    public ResponseEntity<?> validateFine(@RequestParam String referenceNumber) {
+        try {
+            // Tell the database to search exactly for the string (e.g., TF-2026-3578C0)
+            Optional<Fine> matchedFine = fineRepository.findByReferenceNumber(referenceNumber.trim());
+
+            if (matchedFine.isPresent()) {
+                return ResponseEntity.ok(matchedFine.get());
+            } else {
+                return ResponseEntity.status(404).body("{\"message\": \"Fine not found for Reference: " + referenceNumber + "\"}");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("{\"message\": \"Server error during validation\"}");
+        }
     }
 }

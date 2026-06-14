@@ -16,18 +16,28 @@ class TrafficFine {
 
   factory TrafficFine.fromJson(Map<String, dynamic> json) {
     return TrafficFine(
-      id: json['id'] as String,
-      referenceNumber: json['referenceNumber'] as String,
-      categoryId: json['categoryId'] as String,
-      categoryName: json['categoryName'] as String,
-      amount: (json['amount'] as num).toDouble(),
-      violationDescription: json['violationDescription'] as String,
-      issueDate: json['issueDate'] as String,
-      driverId: json['driverId'] as String,
-      vehicleNumber: json['vehicleNumber'] as String,
-      status: json['status'] as String? ?? 'PENDING',
+      // 1. FIXED THE CRASH: Safely convert integer IDs to Strings
+      id: json['id']?.toString() ?? '',
+      referenceNumber: json['referenceNumber']?.toString() ?? '',
+      
+      // 2. FIXED FIELD MISMATCHES: Check both Flutter's expected name and Spring Boot's actual name
+      categoryId: (json['categoryId'] ?? json['categoryIdentifier'])?.toString() ?? '',
+      categoryName: json['categoryName']?.toString() ?? '',
+      
+      // Safely parse the double amount
+      amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
+      
+      violationDescription: (json['violationDescription'] ?? json['description'])?.toString() ?? '',
+      issueDate: (json['issueDate'] ?? json['issuedAt'])?.toString() ?? '',
+      
+      // Handle the nested driver object from the backend
+      driverId: (json['driverId'] ?? json['driver']?['id'])?.toString() ?? '',
+      
+      vehicleNumber: json['vehicleNumber']?.toString() ?? '',
+      status: json['status']?.toString() ?? 'PENDING',
     );
   }
+
   final String id;
   final String referenceNumber;
   final String categoryId;
