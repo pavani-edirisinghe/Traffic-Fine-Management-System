@@ -1,30 +1,51 @@
 import { useState } from 'react';
-import { Box, Typography, Card, CardContent, TextField, Button, Grid, Snackbar, Alert, Divider } from '@mui/material';
+import {
+  Box, Typography, Card, CardContent, TextField, Button,
+  Grid, Snackbar, Alert, Divider
+} from '@mui/material';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import { createOfficer } from '../services/api';
 
 export default function ManageOfficers() {
   const [formData, setFormData] = useState({
     fullName: '',
     badgeId: '',
-    email: '',
-    station: ''
+    username: '',
+    password: '',
+    phoneNumber: '',
+    district: '',
   });
-  const [openSnackbar, setSnackbar] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, severity: 'success', message: '' });
 
-  // ─── Input Handler ───
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // ─── Submit Handler ───
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Later, this is where we will send the data to the Spring Boot backend
-    console.log("Registering Officer:", formData);
-    
-    // Show success message and clear form
-    setSnackbar(true);
-    setFormData({ fullName: '', badgeId: '', email: '', station: '' });
+    setLoading(true);
+    try {
+      const result = await createOfficer({
+        username: formData.username.trim(),
+        password: formData.password.trim(),
+        fullName: formData.fullName.trim(),
+        badgeId: formData.badgeId.trim(),
+        phoneNumber: formData.phoneNumber.trim(),
+        district: formData.district.trim(),
+      });
+      setSnackbar({
+        open: true,
+        severity: 'success',
+        message: `Officer "${result.username}" created. Temporary password: ${result.temporaryPassword}`,
+      });
+      setFormData({ fullName: '', badgeId: '', username: '', password: '', phoneNumber: '', district: '' });
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.response?.data || 'Failed to create officer.';
+      setSnackbar({ open: true, severity: 'error', message: msg });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -32,7 +53,6 @@ export default function ManageOfficers() {
       <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Manage Officers</Typography>
 
       <Grid container spacing={3}>
-        {/* Registration Form Column */}
         <Grid item xs={12} md={6}>
           <Card elevation={2}>
             <Box sx={{ bgcolor: '#1976d2', color: 'white', p: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -42,46 +62,65 @@ export default function ManageOfficers() {
             <CardContent>
               <form onSubmit={handleSubmit}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
-                  <TextField 
-                    label="Full Name" 
+                  <TextField
+                    label="Full Name"
                     name="fullName"
                     value={formData.fullName}
                     onChange={handleChange}
-                    required 
-                    fullWidth 
+                    required
+                    fullWidth
                   />
-                  <TextField 
-                    label="Badge ID / Service No." 
+                  <TextField
+                    label="Badge ID / Service No."
                     name="badgeId"
                     value={formData.badgeId}
                     onChange={handleChange}
-                    required 
-                    fullWidth 
+                    required
+                    fullWidth
                   />
-                  <TextField 
-                    label="Official Email" 
-                    name="email"
-                    type="email"
-                    value={formData.email}
+                  <TextField
+                    label="Username (e.g. officer email or ID)"
+                    name="username"
+                    value={formData.username}
                     onChange={handleChange}
-                    required 
-                    fullWidth 
+                    required
+                    fullWidth
                   />
-                  <TextField 
-                    label="Assigned Police Station" 
-                    name="station"
-                    value={formData.station}
+                  <TextField
+                    label="Temporary Password"
+                    name="password"
+                    type="password"
+                    value={formData.password}
                     onChange={handleChange}
-                    required 
-                    fullWidth 
+                    required
+                    fullWidth
+                    inputProps={{ minLength: 8 }}
+                    helperText="Minimum 8 characters"
                   />
-                  <Button 
-                    type="submit" 
-                    variant="contained" 
-                    size="large" 
+                  <TextField
+                    label="Phone Number"
+                    name="phoneNumber"
+                    value={formData.phoneNumber}
+                    onChange={handleChange}
+                    required
+                    fullWidth
+                  />
+                  <TextField
+                    label="Assigned District / Station"
+                    name="district"
+                    value={formData.district}
+                    onChange={handleChange}
+                    required
+                    fullWidth
+                  />
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    size="large"
+                    disabled={loading}
                     sx={{ mt: 2, py: 1.5, fontWeight: 'bold' }}
                   >
-                    Generate Officer Account
+                    {loading ? 'Creating...' : 'Generate Officer Account'}
                   </Button>
                 </Box>
               </form>
@@ -89,7 +128,6 @@ export default function ManageOfficers() {
           </Card>
         </Grid>
 
-        {/* Instructions / Recent Column */}
         <Grid item xs={12} md={6}>
           <Card elevation={2} sx={{ height: '100%' }}>
             <CardContent>
@@ -99,25 +137,28 @@ export default function ManageOfficers() {
                 1. Verify the officer's credentials before creating an account.
               </Typography>
               <Typography variant="body2" color="text.secondary" paragraph>
-                2. Generating an account will automatically send a temporary password to the provided official email address.
+                2. The temporary password you set will be shown once after creation — share it securely with the officer.
               </Typography>
               <Typography variant="body2" color="text.secondary" paragraph>
-                3. The officer will be forced to change this password upon their first login to the mobile application or officer portal.
+                3. The officer uses the username and temporary password to log in via the officer portal.
               </Typography>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      {/* Success Notification */}
-      <Snackbar 
-        open={openSnackbar} 
-        autoHideDuration={4000} 
-        onClose={() => setSnackbar(false)}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={8000}
+        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert onClose={() => setSnackbar(false)} severity="success" sx={{ width: '100%' }}>
-          Officer account generated successfully!
+        <Alert
+          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
         </Alert>
       </Snackbar>
     </Box>

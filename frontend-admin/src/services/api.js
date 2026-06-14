@@ -1,8 +1,7 @@
 import axios from 'axios';
 import { getAccessToken } from './auth';
 
-const API_BASE_URL = 'http://localhost:8080/api/v1'; 
-const ROOT_API_URL = 'http://localhost:8080/api'; 
+const API_BASE_URL = 'http://localhost:8080/api/v1';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -20,33 +19,18 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+// ── Auth ──────────────────────────────────────────────────────────────────────
 export const login = async ({ username, password }) => {
   const response = await apiClient.post('/auth/login', { username, password });
   return response.data;
 };
 
-export const createOfficer = async ({ username, password }) => {
-  const response = await apiClient.post('/admin/officers', { username, password });
+export const me = async () => {
+  const response = await apiClient.get('/auth/me');
   return response.data;
 };
 
-export const updateOfficer = async ({ currentUsername, newUsername, newPassword }) => {
-  const response = await apiClient.put(`/admin/officers/${encodeURIComponent(currentUsername)}`, {
-    newUsername,
-    newPassword,
-  });
-  return response.data;
-};
-
-export const deleteOfficer = async (username) => {
-  await apiClient.delete(`/admin/officers/${encodeURIComponent(username)}`);
-};
-
-export const issueDriverToken = async (payload) => {
-  const response = await apiClient.post('/officer/driver-token', payload);
-  return response.data;
-};
-
+// ── Admin ─────────────────────────────────────────────────────────────────────
 export const getOfficers = async () => {
   const response = await apiClient.get('/admin/officers');
   return response.data;
@@ -57,46 +41,64 @@ export const getDrivers = async () => {
   return response.data;
 };
 
-export const me = async () => {
-  const response = await apiClient.get('/auth/me');
+export const createOfficer = async ({ username, password, fullName, badgeId, phoneNumber, district }) => {
+  const response = await apiClient.post('/admin/officers', {
+    username, password, fullName, badgeId, phoneNumber, district,
+  });
   return response.data;
+};
+
+export const updateOfficer = async ({ currentUsername, newUsername, newPassword, displayName, phoneNumber }) => {
+  const response = await apiClient.put(`/admin/officers/${encodeURIComponent(currentUsername)}`, {
+    newUsername, newPassword, displayName, phoneNumber,
+  });
+  return response.data;
+};
+
+export const deleteOfficer = async (username) => {
+  await apiClient.delete(`/admin/officers/${encodeURIComponent(username)}`);
 };
 
 export const getAllFines = async () => {
-  try {
-    const response = await apiClient.get('/fines');
-    return response.data; 
-  } catch (error) {
-    console.error("API Error fetching fines:", error);
-    throw error;
-  }
-};
-
-export const issueFine = async (driverId, officerId, amount, description) => {
-  const response = await apiClient.post(`${ROOT_API_URL}/fines/issue`, null, {
-    params: { driverId, officerId, amount, description }
-  });
+  const response = await apiClient.get('/admin/fines');
   return response.data;
 };
 
-export const getDriverFines = async (driverId) => {
-  const response = await apiClient.get(`${ROOT_API_URL}/fines/driver/${driverId}`);
+export const getAdminAnalytics = async () => {
+  const response = await apiClient.get('/admin/analytics');
   return response.data;
 };
 
-export const payFine = async (fineId, amount, method) => {
-  const response = await apiClient.post(`${ROOT_API_URL}/payments/${fineId}`, null, {
-    params: { amount, method }
-  });
+// ── Officer ───────────────────────────────────────────────────────────────────
+export const issueDriverToken = async (payload) => {
+  const response = await apiClient.post('/officer/driver-token', payload);
   return response.data;
 };
 
-export const getOfficerNotifications = async (officerId) => {
-  const response = await apiClient.get(`${ROOT_API_URL}/notifications/officer/${officerId}`);
+export const getOfficerFines = async () => {
+  const response = await apiClient.get('/officer/fines');
+  return response.data;
+};
+
+export const getOfficerNotifications = async () => {
+  const response = await apiClient.get('/officer/notifications');
   return response.data;
 };
 
 export const markNotificationAsRead = async (notificationId) => {
-  const response = await apiClient.put(`${ROOT_API_URL}/notifications/${notificationId}/read`);
+  const response = await apiClient.put(`/officer/notifications/${notificationId}/read`);
+  return response.data;
+};
+
+// ── Driver ────────────────────────────────────────────────────────────────────
+export const getDriverFines = async () => {
+  const response = await apiClient.get('/driver/fines');
+  return response.data;
+};
+
+export const payFine = async (fineId, method = 'ONLINE') => {
+  const response = await apiClient.post(`/driver/pay/${fineId}`, null, {
+    params: { method },
+  });
   return response.data;
 };

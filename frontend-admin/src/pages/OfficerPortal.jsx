@@ -1,5 +1,5 @@
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -18,19 +18,26 @@ import {
   Button,
   TextField,
   Stack,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import PolicyIcon from '@mui/icons-material/Policy';
 import LocalPoliceIcon from '@mui/icons-material/LocalPolice';
 import AddIcon from '@mui/icons-material/Add';
+import DoneIcon from '@mui/icons-material/Done';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { useLocation, Navigate, useNavigate } from 'react-router-dom';
-import { mockFines } from '../data/mockData';
 import {
   appendOfficerTokenHistory,
-  getOfficerNotifications,
   getOfficerProfile,
   getOfficerTokenHistory,
 } from '../services/auth';
-import { issueDriverToken } from '../services/api';
+import {
+  issueDriverToken,
+  getOfficerFines,
+  getOfficerNotifications,
+  markNotificationAsRead,
+} from '../services/api';
 import LogoutButton from '../components/LogoutButton';
 
 const INITIAL_FORM_STATE = {
@@ -52,12 +59,29 @@ export default function OfficerPortal() {
   const [tokenError, setTokenError] = useState('');
   const [issuingToken, setIssuingToken] = useState(false);
   const [tokenHistory, setTokenHistory] = useState(() => getOfficerTokenHistory(currentOfficer?.id));
-  const [notificationHistory, setNotificationHistory] = useState(() => getOfficerNotifications(currentOfficer?.id));
+  const [notificationHistory, setNotificationHistory] = useState([]);
+  const [officerFines, setOfficerFines] = useState([]);
 
-  const officerFines = useMemo(
-    () => mockFines.filter((fine) => fine.officerId === currentOfficer?.id),
-    [currentOfficer?.id]
-  );
+  useEffect(() => {
+    if (!currentOfficer) return;
+    getOfficerFines().then(setOfficerFines).catch(console.error);
+    getOfficerNotifications().then(setNotificationHistory).catch(console.error);
+  }, [currentOfficer?.id]);
+
+  const refreshNotifications = () => {
+    getOfficerNotifications().then(setNotificationHistory).catch(console.error);
+  };
+
+  const handleMarkRead = async (notificationId) => {
+    try {
+      const updated = await markNotificationAsRead(notificationId);
+      setNotificationHistory((prev) =>
+        prev.map((n) => (n.id === updated.id ? updated : n))
+      );
+    } catch (e) {
+      console.error('Failed to mark notification as read', e);
+    }
+  };
 
   if (!currentOfficer) {
     return <Navigate to="/login" replace />;
@@ -128,15 +152,13 @@ export default function OfficerPortal() {
   useEffect(() => {
     const handleStorageChange = () => {
       setTokenHistory(getOfficerTokenHistory(currentOfficer?.id));
-      setNotificationHistory(getOfficerNotifications(currentOfficer?.id));
     };
-
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [currentOfficer?.id]);
 
   const paidFinesCount = officerFines.filter((f) => f.status === 'PAID').length;
-  const pendingFinesCount = officerFines.filter((f) => f.status === 'PENDING').length;
+  const pendingFinesCount = officerFines.filter((f) => f.status === 'UNPAID').length;
 
   return (
     <Box
@@ -383,10 +405,15 @@ export default function OfficerPortal() {
         </TableContainer>
 
         <TableContainer component={Paper} elevation={3} sx={{ borderRadius: 3, overflow: 'hidden', mb: 4 }}>
-          <Box sx={{ backgroundColor: '#14532d', color: 'white', p: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ backgroundColor: '#14532d', color: 'white', p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Typography variant="h6" fontWeight="medium">
               Payment Notifications
             </Typography>
+            <Tooltip title="Refresh">
+              <IconButton size="small" sx={{ color: 'white' }} onClick={refreshNotifications}>
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
           </Box>
 
           {notificationHistory.length === 0 ? (
@@ -395,39 +422,47 @@ export default function OfficerPortal() {
             </Alert>
           ) : (
             <Box sx={{ width: '100%', backgroundColor: 'white', overflowX: 'auto' }}>
-              <Table sx={{ minWidth: 1100 }} aria-label="officer payment notifications table">
+              <Table aria-label="officer payment notifications table">
                 <TableHead sx={{ backgroundColor: '#f1f5f9' }}>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Time Paid</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Driver Name</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Phone</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Reference No.</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Amount</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Vehicle No.</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Time</TableCell>
                     <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Message</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Action</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {notificationHistory.map((row) => (
                     <TableRow
-                      key={`${row.referenceNumber}-${row.paidAt}`}
+                      key={row.id}
                       sx={{
                         '&:last-child td, &:last-child th': { border: 0 },
                         '&:hover': { backgroundColor: '#f8fafc' },
+                        backgroundColor: row.isRead ? 'inherit' : '#f0fdf4',
                       }}
                     >
                       <TableCell sx={{ color: '#64748b', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
-                        {formatIssuedAt(row.paidAt)}
+                        {formatIssuedAt(row.createdAt)}
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 'medium' }}>{row.driverName || 'N/A'}</TableCell>
-                      <TableCell sx={{ color: '#475569' }}>{row.phoneNumber || 'N/A'}</TableCell>
-                      <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
-                        {row.referenceNumber || 'N/A'}
+                      <TableCell sx={{ maxWidth: 520, whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                        {row.message}
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 'medium' }}>{formatAmount(row.amount)}</TableCell>
-                      <TableCell sx={{ color: '#475569' }}>{row.vehicleNumber || 'N/A'}</TableCell>
-                      <TableCell sx={{ maxWidth: 420, whiteSpace: 'normal', wordBreak: 'break-word' }}>
-                        {row.message || 'Fine payment received.'}
+                      <TableCell>
+                        <Chip
+                          label={row.isRead ? 'Read' : 'Unread'}
+                          color={row.isRead ? 'default' : 'success'}
+                          size="small"
+                          sx={{ fontWeight: 'bold', borderRadius: 1.5 }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {!row.isRead && (
+                          <Tooltip title="Mark as read">
+                            <IconButton size="small" color="success" onClick={() => handleMarkRead(row.id)}>
+                              <DoneIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -492,7 +527,7 @@ export default function OfficerPortal() {
                         />
                       </TableCell>
                       <TableCell sx={{ color: '#64748b', fontSize: '0.875rem' }}>
-                        {formatDate(row.dateIssued)}
+                        {formatDate(row.issuedAt)}
                       </TableCell>
                     </TableRow>
                   ))}
