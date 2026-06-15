@@ -139,8 +139,8 @@ export default function Login() {
             {/* FIELD 1 */}
             <TextField
               fullWidth
-              label={isDriver ? "Access Token" : "Email Address"}
-              placeholder={isDriver ? "Paste token from the officer" : "e.g., officer@police.lk"}
+              label={isDriver ? "Access Token" : "Username"}
+              placeholder={isDriver ? "Paste token from the officer" : "Enter your username"}
               variant="outlined"
               sx={{ mb: 3 }}
               required

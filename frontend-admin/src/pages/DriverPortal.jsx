@@ -1,14 +1,32 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { 
-  Box, Card, CardContent, Typography, Button, 
-  Alert, CircularProgress, Divider, Paper 
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Button,
+  Alert,
+  CircularProgress,
+  Divider,
+  Paper,
 } from '@mui/material';
 import PolicyIcon from '@mui/icons-material/Policy';
 import PaymentIcon from '@mui/icons-material/Payment';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { mockFines } from '../data/mockData'; 
-import { appendOfficerNotification, getAuth, getDriverContext, parseJwtPayload } from '../services/auth';
+
+import {
+  appendOfficerNotification,
+  getAuth,
+  getDriverContext,
+  parseJwtPayload,
+} from '../services/auth';
+
+import {
+  getFineByReferenceNumber,
+  payFineById,
+} from '../services/api';
+
 import LogoutButton from '../components/LogoutButton';
 
 export default function DriverPortal() {
@@ -17,61 +35,77 @@ export default function DriverPortal() {
 
   const auth = getAuth();
   const payload = auth?.accessToken ? parseJwtPayload(auth.accessToken) : null;
-  const tokenCtx = payload || null;
 
-  const ctx = location.state || getDriverContext() || tokenCtx || {};
-  const { referenceNumber, categoryIdentifier } = ctx;
-
-  const hasTokenFine = Boolean(ctx?.wrongDid || ctx?.amount || ctx?.driverName);
-  const tokenFine = hasTokenFine
-    ? {
-        referenceNumber: ctx.referenceNumber || 'N/A',
-        categoryName: ctx.wrongDid || ctx.categoryIdentifier || 'Traffic Violation',
-        amount: Number(ctx.amount || 0),
-        vehicleNumber: ctx.vehicleNumber || 'N/A',
-        driverLicense: ctx.licenseNumber || 'N/A',
-        status: 'PENDING',
-        driverName: ctx.driverName,
-        phoneNumber: ctx.phoneNumber,
-        officerId: ctx.officerId,
-      }
-    : null;
+  const ctx = location.state || getDriverContext() || payload || {};
+  const { referenceNumber } = ctx;
 
   const [fineDetails, setFineDetails] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [paymentStatus, setPaymentStatus] = useState(null);
 
-  if (!referenceNumber && !hasTokenFine) {
-    return <Navigate to="/login" replace />;
-  }
+  const refNo = referenceNumber || ctx?.referenceNumber;
 
   useEffect(() => {
-    if (tokenFine) {
-      setFineDetails(tokenFine);
-      setLoading(false);
-      return;
-    }
+    const loadFine = async () => {
+      try {
+        setLoading(true);
+        setError('');
 
-    setTimeout(() => {
-      const foundFine = mockFines.find(
-        f => f.referenceNumber === referenceNumber && 
-             f.categoryIdentifier === categoryIdentifier
+        if (!refNo) {
+          setError('Reference number not found.');
+          return;
+        }
+
+        const dbFine = await getFineByReferenceNumber(refNo);
+
+        if (dbFine) {
+          setFineDetails({
+            id: dbFine.id,
+            referenceNumber: dbFine.referenceNumber || refNo,
+            categoryName:
+              dbFine.categoryName ||
+              dbFine.description ||
+              dbFine.wrongDid ||
+              'Traffic Violation',
+            amount: Number(dbFine.amount || 0),
+            vehicleNumber: dbFine.vehicleNumber || 'N/A',
+            driverLicense: dbFine.driverLicense || dbFine.licenseNumber || 'N/A',
+            status: dbFine.status || 'PENDING',
+            datePaid: dbFine.datePaid || null,
+            driverName: dbFine.driverName || 'N/A',
+            phoneNumber: dbFine.phoneNumber || 'N/A',
+            officerId: dbFine.officerId || 'unknown',
+          });
+        } else {
+          setError(
+            'No fine found with those details. Please check your reference number and try again.'
+          );
+        }
+      } catch (err) {
+        console.error('Error loading fine:', err);
+        setError('Unable to load fine details from database.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFine();
+  }, [refNo]);
+
+  const handlePayment = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const paidFine = await payFineById(
+        fineDetails.id,
+        fineDetails.amount,
+        'ONLINE'
       );
 
-      if (foundFine) {
-        setFineDetails(foundFine);
-      } else {
-        setError('No fine found with those details. Please check your reference number and try again.');
-      }
-      setLoading(false);
-    }, 1000); // Small 1-second delay to simulate network request
-  }, [referenceNumber, categoryIdentifier, hasTokenFine, ctx?.wrongDid, ctx?.amount, ctx?.driverName, ctx?.referenceNumber, ctx?.categoryIdentifier]);
+      const paidAt = paidFine?.datePaid || new Date().toISOString();
 
-  const handlePayment = () => {
-    setLoading(true);
-    setTimeout(() => {
-      const paidAt = new Date().toISOString();
       const paidNotification = {
         officerId: fineDetails?.officerId || 'unknown',
         referenceNumber: fineDetails?.referenceNumber || 'N/A',
@@ -80,140 +114,240 @@ export default function DriverPortal() {
         vehicleNumber: fineDetails?.vehicleNumber || 'N/A',
         amount: fineDetails?.amount || 0,
         paidAt,
-        message: `${fineDetails?.driverName || 'Driver'} paid Rs. ${Number(fineDetails?.amount || 0).toLocaleString()} for ${fineDetails?.referenceNumber || 'the ticket'} at ${new Date(paidAt).toLocaleString('en-US')}`,
+        message: `${fineDetails?.driverName || 'Driver'} paid Rs. ${Number(
+          fineDetails?.amount || 0
+        ).toLocaleString()} for ${
+          fineDetails?.referenceNumber || 'the ticket'
+        } at ${new Date(paidAt).toLocaleString('en-US')}`,
       };
 
       if (fineDetails?.officerId) {
         appendOfficerNotification(fineDetails.officerId, paidNotification);
       }
 
-      const matchedFine = mockFines.find((fine) => fine.referenceNumber === fineDetails?.referenceNumber);
-      if (matchedFine) {
-        matchedFine.status = 'PAID';
-        matchedFine.datePaid = paidAt;
-      }
-
       setPaymentStatus('SUCCESS');
-      setFineDetails({ ...fineDetails, status: 'PAID', datePaid: paidAt });
+
+      setFineDetails({
+        ...fineDetails,
+        ...paidFine,
+        status: 'PAID',
+        datePaid: paidAt,
+      });
+    } catch (err) {
+      console.error('Payment error:', err);
+      setError('Payment failed. Please try again.');
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
+  if (!refNo) {
+    return <Navigate to="/login" replace />;
+  }
+
   return (
-    <Box sx={{ 
-      minHeight: '100vh', 
-      display: 'flex', 
-      flexDirection: 'column',
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      backgroundColor: '#f8fafc',
-      p: 2
-    }}>
-      
-      {/* Back Button */}
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#f8fafc',
+        p: 2,
+      }}
+    >
       <Box sx={{ width: '100%', maxWidth: 480, mb: 2 }}>
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'space-between' }}>
-          <Button 
-            startIcon={<ArrowBackIcon />} 
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 1,
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Button
+            startIcon={<ArrowBackIcon />}
             onClick={() => navigate('/login')}
             sx={{ fontWeight: 'bold' }}
           >
             Search Another Ticket
           </Button>
+
           <LogoutButton sx={{ color: '#0f172a', borderColor: '#cbd5e1' }} />
         </Box>
       </Box>
 
-      <Card elevation={6} sx={{ maxWidth: 480, width: '100%', borderRadius: 3, overflow: 'hidden' }}>
-        
-        {/* Header */}
-        <Box sx={{ 
-          backgroundColor: '#1976d2', 
-          color: 'white', 
-          p: 2, 
-          textAlign: 'center',
-        }}>
+      <Card
+        elevation={6}
+        sx={{
+          maxWidth: 480,
+          width: '100%',
+          borderRadius: 3,
+          overflow: 'hidden',
+        }}
+      >
+        <Box
+          sx={{
+            backgroundColor: '#1976d2',
+            color: 'white',
+            p: 2,
+            textAlign: 'center',
+          }}
+        >
           <PolicyIcon sx={{ fontSize: 38, mb: 1 }} />
+
           <Typography variant="h5" fontWeight="bold">
             Traffic Fine Portal
           </Typography>
+
           <Typography variant="caption" sx={{ opacity: 0.9 }}>
             Sri Lanka Police Department
           </Typography>
         </Box>
 
         <CardContent sx={{ p: 3 }}>
-          
-          {loading && !fineDetails && !error ? (
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4 }}>
+          {loading && !fineDetails && !error && (
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                py: 4,
+              }}
+            >
               <CircularProgress sx={{ mb: 2 }} />
-              <Typography color="textSecondary">Searching for ticket...</Typography>
+              <Typography color="textSecondary">
+                Searching for ticket...
+              </Typography>
             </Box>
-          ) : null}
-
-          {error && (
-            <Alert severity="error" sx={{ borderRadius: 2 }}>{error}</Alert>
           )}
 
-          {/* Fine Details */}
+          {error && (
+            <Alert severity="error" sx={{ borderRadius: 2, mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+
           {fineDetails && (
             <Box>
               <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
                 Ticket Found: {fineDetails.referenceNumber}
               </Typography>
 
-              {fineDetails.driverName ? (
+              {fineDetails.driverName && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  Driver: {fineDetails.driverName} {fineDetails.phoneNumber ? `• ${fineDetails.phoneNumber}` : ''}
+                  Driver: {fineDetails.driverName}{' '}
+                  {fineDetails.phoneNumber ? `• ${fineDetails.phoneNumber}` : ''}
                 </Typography>
-              ) : null}
+              )}
 
-              <Paper elevation={0} sx={{ backgroundColor: '#f1f5f9', p: 2, borderRadius: 2, mb: 3, mt: 2 }}>
+              <Paper
+                elevation={0}
+                sx={{
+                  backgroundColor: '#f1f5f9',
+                  p: 2,
+                  borderRadius: 2,
+                  mb: 3,
+                  mt: 2,
+                }}
+              >
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2" color="textSecondary">Wrong Did:</Typography>
-                  <Typography variant="body2" fontWeight="bold">{fineDetails.categoryName}</Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Wrong Did:
+                  </Typography>
+                  <Typography variant="body2" fontWeight="bold">
+                    {fineDetails.categoryName}
+                  </Typography>
                 </Box>
+
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2" color="textSecondary">Vehicle No:</Typography>
-                  <Typography variant="body2" fontWeight="bold">{fineDetails.vehicleNumber}</Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Vehicle No:
+                  </Typography>
+                  <Typography variant="body2" fontWeight="bold">
+                    {fineDetails.vehicleNumber}
+                  </Typography>
                 </Box>
-                {fineDetails.officerId ? (
+
+                {fineDetails.officerId && (
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2" color="textSecondary">Officer ID:</Typography>
-                    <Typography variant="body2" fontWeight="bold">{fineDetails.officerId}</Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      Officer ID:
+                    </Typography>
+                    <Typography variant="body2" fontWeight="bold">
+                      {fineDetails.officerId}
+                    </Typography>
                   </Box>
-                ) : null}
+                )}
+
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2" color="textSecondary">Status:</Typography>
-                  <Typography variant="body2" fontWeight="bold" color={fineDetails.status === 'PAID' ? 'success.main' : 'warning.main'}>
+                  <Typography variant="body2" color="textSecondary">
+                    Status:
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    fontWeight="bold"
+                    color={
+                      fineDetails.status === 'PAID'
+                        ? 'success.main'
+                        : 'warning.main'
+                    }
+                  >
                     {fineDetails.status}
                   </Typography>
                 </Box>
+
+                {fineDetails.datePaid && (
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body2" color="textSecondary">
+                      Paid Date:
+                    </Typography>
+                    <Typography variant="body2" fontWeight="bold">
+                      {new Date(fineDetails.datePaid).toLocaleString()}
+                    </Typography>
+                  </Box>
+                )}
+
                 <Divider sx={{ my: 1.5 }} />
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="body2" color="textSecondary">Amount Due:</Typography>
+
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Typography variant="body2" color="textSecondary">
+                    Amount Due:
+                  </Typography>
+
                   <Typography variant="h6" fontWeight="bold" color="error.main">
-                    Rs. {fineDetails.amount.toLocaleString()}
+                    Rs. {Number(fineDetails.amount || 0).toLocaleString()}
                   </Typography>
                 </Box>
               </Paper>
 
               {paymentStatus === 'SUCCESS' || fineDetails.status === 'PAID' ? (
                 <Alert severity="success" sx={{ borderRadius: 2 }}>
-                  Payment successful! An SMS notification has been sent to the issuing officer.
+                  Payment successful! This fine has already been paid.
                 </Alert>
               ) : (
-                <Button 
-                  variant="contained" 
-                  color="success" 
-                  fullWidth 
+                <Button
+                  variant="contained"
+                  color="success"
+                  fullWidth
                   size="large"
                   onClick={handlePayment}
                   disabled={loading}
                   startIcon={!loading && <PaymentIcon />}
                   sx={{ py: 1.5, fontWeight: 'bold', borderRadius: 2 }}
                 >
-                  {loading ? <CircularProgress size={24} color="inherit" /> : `Pay Rs. ${fineDetails.amount.toLocaleString()}`}
+                  {loading ? (
+                    <CircularProgress size={24} color="inherit" />
+                  ) : (
+                    `Pay Rs. ${Number(fineDetails.amount || 0).toLocaleString()}`
+                  )}
                 </Button>
               )}
             </Box>

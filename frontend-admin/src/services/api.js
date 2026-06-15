@@ -183,3 +183,31 @@ export const markNotificationAsRead = async (notificationId) => {
 
   return response.data;
 };
+
+export const getFineByReferenceNumber = async (referenceNumber) => {
+  const response = await apiClient.get(
+    `${ROOT_API_URL}/fines/reference/${encodeURIComponent(referenceNumber)}`
+  );
+
+  return response.data;
+};
+
+export const payFineById = async (fineId, amount, method = 'ONLINE') => {
+  const response = await apiClient.post(
+    `${ROOT_API_URL}/payments/${fineId}`,
+    null,
+    {
+      params: {
+        amount,
+        method,
+      },
+    }
+  );
+
+  return response.data;
+};
+
+export const getOfficerFines = async () => {
+  const response = await apiClient.get(`${ROOT_API_URL}/fines/officer/me`);
+  return response.data;
+};
