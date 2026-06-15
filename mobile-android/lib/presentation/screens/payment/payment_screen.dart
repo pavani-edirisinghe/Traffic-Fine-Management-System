@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../config/dependencies/service_locator.dart';
-import '../../../presentation/providers/payment_provider.dart';
 import '../../../data/repositories/fine_repository.dart';
 import '../../../domain/models/traffic_fine.dart';
+import '../../widgets/logout_button.dart';
 
 class PaymentScreen extends StatefulWidget {
   const PaymentScreen({Key? key, required this.fineId}) : super(key: key);
@@ -17,10 +17,13 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
-  late final PaymentProvider _paymentProvider = getIt<PaymentProvider>();
   late final FineRepository _fineRepo = getIt<FineRepository>();
   
   late Future<TrafficFine> _fineFuture;
+
+  // Local state to match React's paymentStatus and loading hooks
+  bool _isProcessing = false;
+  String? _paymentStatus;
 
   @override
   void initState() {
@@ -41,6 +44,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
           'SEARCH ANOTHER TICKET',
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
         ),
+        actions: const [
+          LogoutButton(),
+        ],
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/login'),
@@ -141,7 +147,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                               const SizedBox(height: 4),
                               if (fine.driverId.isNotEmpty)
                                 Text(
-                                  'Driver: ${fine.driverId}', // Update if you have a driverName field
+                                  'Driver: ${fine.driverId}', 
                                   style: TextStyle(color: Colors.grey[700], fontSize: 14),
                                 ),
                               const SizedBox(height: 24),
@@ -159,7 +165,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                     const SizedBox(height: 12),
                                     _buildDetailRow('Vehicle No:', fine.vehicleNumber),
                                     const SizedBox(height: 12),
-                                    _buildDetailRow('Status:', fine.status, isStatus: true),
+                                    _buildDetailRow('Status:', _paymentStatus == 'SUCCESS' ? 'PAID' : fine.status, isStatus: true),
                                     const Padding(
                                       padding: EdgeInsets.symmetric(vertical: 12),
                                       child: Divider(height: 1, color: Colors.black12),
@@ -183,44 +189,53 @@ class _PaymentScreenState extends State<PaymentScreen> {
                               ),
                               const SizedBox(height: 24),
 
-                              // --- GREEN PAYMENT BUTTON ---
-                              AnimatedBuilder(
-                                animation: _paymentProvider,
-                                builder: (context, _) {
-                                  final isLoading = _paymentProvider.isLoading;
-                                  return SizedBox(
-                                    width: double.infinity,
-                                    height: 50,
-                                    child: ElevatedButton.icon(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF2E7D32), // React Green
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
+                              // --- EXACT MATCH TO REACT'S SUCCESS/BUTTON LOGIC ---
+                              if (_paymentStatus == 'SUCCESS' || fine.status.toUpperCase() == 'PAID')
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEDF7ED), // MUI success alert background
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Text(
+                                    'Payment successful! This fine has already been paid.',
+                                    style: TextStyle(color: Color(0xFF1E4620)), // MUI success text
+                                    textAlign: TextAlign.left,
+                                  ),
+                                )
+                              else
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 50,
+                                  child: ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF2E7D32), // React Green
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
-                                      onPressed: isLoading
-                                          ? null
-                                          : () => _initiatePayment(context),
-                                      icon: isLoading 
-                                          ? const SizedBox.shrink() 
-                                          : const Icon(Icons.payment),
-                                      label: isLoading
-                                          ? const SizedBox(
-                                              height: 20, width: 20,
-                                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                            )
-                                          : Text(
-                                              'PAY RS. ${fine.amount.toStringAsFixed(0)}',
-                                              style: const TextStyle(
-                                                fontSize: 16, 
-                                                fontWeight: FontWeight.bold
-                                              ),
-                                            ),
                                     ),
-                                  );
-                                },
-                              ),
+                                    onPressed: _isProcessing
+                                        ? null
+                                        : () => _initiatePayment(fine.id, fine.amount),
+                                    icon: _isProcessing 
+                                        ? const SizedBox.shrink() 
+                                        : const Icon(Icons.payment),
+                                    label: _isProcessing
+                                        ? const SizedBox(
+                                            height: 20, width: 20,
+                                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                          )
+                                        : Text(
+                                            'PAY RS. ${fine.amount.toStringAsFixed(0)}',
+                                            style: const TextStyle(
+                                              fontSize: 16, 
+                                              fontWeight: FontWeight.bold
+                                            ),
+                                          ),
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -257,19 +272,32 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  void _initiatePayment(BuildContext context) async {
-    // Hidden the Dropdown to match React Web Portal UI exactly. 
-    // Defaulting to CARD for the provider.
-    final success = await _paymentProvider.initiatePayment(paymentMethod: 'CARD');
+  void _initiatePayment(String fineId, double amount) async {
+    setState(() {
+      _isProcessing = true;
+    });
 
-    if (success && context.mounted) {
-      // Assuming your provider sets currentPayment upon success
-      final paymentId = _paymentProvider.currentPayment?.id ?? 'success';
-      context.push('/payment-confirmation/$paymentId');
-    } else if (!success && context.mounted) {
+    // Mirroring React: payFineById(fineDetails.id, fineDetails.amount, 'ONLINE')
+    final success = await _fineRepo.payFineById(
+      fineId: fineId,
+      amount: amount,
+      paymentMethod: 'ONLINE',
+    );
+
+    if (!mounted) return;
+
+    if (success) {
+      setState(() {
+        _paymentStatus = 'SUCCESS';
+        _isProcessing = false;
+      });
+    } else {
+      setState(() {
+        _isProcessing = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_paymentProvider.error ?? 'Payment failed'),
+        const SnackBar(
+          content: Text('Payment failed. Please try again.'),
           backgroundColor: Colors.red,
         ),
       );

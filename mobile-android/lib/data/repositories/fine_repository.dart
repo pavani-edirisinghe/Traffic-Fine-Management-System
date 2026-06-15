@@ -8,21 +8,44 @@ class FineRepository {
 
   Future<TrafficFine> validateFine({required String referenceNumber}) async {
     try {
-      debugPrint('🚦 [REPO] SENDING REQUEST TO BACKEND: /fines/validate?referenceNumber=$referenceNumber');
+      debugPrint('🚦 [REPO] SENDING REQUEST TO BACKEND: /api/v1/fines/reference/$referenceNumber');
       
-      // Using Dio's queryParameters is safer than string interpolation
       final response = await _apiClient.get(
-        '/fines/validate', 
-        queryParameters: {'referenceNumber': referenceNumber}
+        '/fines/reference/$referenceNumber'
       );
       
       debugPrint('🚦 [REPO] RECEIVED DATA FROM BACKEND!');
       return TrafficFine.fromJson(response);
       
     } catch (e) {
-      // PRINT THE EXACT NETWORK ERROR
       debugPrint('🚨 [REPO] CRITICAL NETWORK ERROR: $e'); 
       throw Exception('Unmasked Error: $e');
     }
   }
+
+  Future<bool> payFineById({
+    required String fineId,
+    required double amount,
+    required String paymentMethod,
+  }) async {
+    try {
+      debugPrint('🚦 [REPO] SENDING PAYMENT FOR FINE ID: $fineId');
+      
+      // Assuming your backend payment endpoint is /api/v1/payments
+      await _apiClient.post(
+        '/payments/$fineId', // Append the ID directly to the path
+        data: {
+          'amount': amount,
+          'paymentMethod': paymentMethod, 
+        },
+      );
+
+      debugPrint('🚦 [REPO] PAYMENT SUCCESSFUL!');
+      return true;
+    } catch (e) {
+      debugPrint('🚨 [REPO] PAYMENT FAILED: $e');
+      return false;
+    }
+  }
+
 }
