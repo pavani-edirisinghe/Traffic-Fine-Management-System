@@ -10,11 +10,7 @@ import org.springframework.security.core.Authentication;
 
 import java.util.HashMap;
 import java.util.List;
-<<<<<<< HEAD
 import java.util.Map;
-=======
-import java.util.Optional;
->>>>>>> 08adce43f956666516f11b7cadb684be7a707499
 
 @RestController
 @RequestMapping("/api/v1/fines")
@@ -32,7 +28,6 @@ public class FineController {
     }
 
     @PostMapping("/issue")
-<<<<<<< HEAD
     public ResponseEntity<?> issueFine(
             @RequestParam Long driverId,
             @RequestParam Long officerId,
@@ -50,14 +45,6 @@ public class FineController {
                         HttpStatus.NOT_FOUND,
                         "Officer not found"
                 ));
-=======
-    public ResponseEntity<?> issueFine(@RequestParam Long driverId,
-                                       @RequestParam Long officerId,
-                                       @RequestParam Double amount,
-                                       @RequestParam String description) {
-        AppUser driver = userRepository.findById(driverId).orElseThrow(() -> new RuntimeException("Driver not found"));
-        AppUser officer = userRepository.findById(officerId).orElseThrow(() -> new RuntimeException("Officer not found"));
->>>>>>> 08adce43f956666516f11b7cadb684be7a707499
 
         Fine fine = new Fine();
         fine.setDriver(driver);
@@ -105,7 +92,6 @@ public class FineController {
         return ResponseEntity.ok(fines);
     }
 
-<<<<<<< HEAD
     @GetMapping("/officer/{officerId}")
     public ResponseEntity<List<Map<String, Object>>> getOfficerFines(
             @PathVariable Long officerId
@@ -201,22 +187,5 @@ public class FineController {
         }
 
         return response;
-=======
-    // --- THE BULLETPROOF VALIDATION ENDPOINT ---
-    @GetMapping("/validate")
-    public ResponseEntity<?> validateFine(@RequestParam String referenceNumber) {
-        try {
-            // Tell the database to search exactly for the string (e.g., TF-2026-3578C0)
-            Optional<Fine> matchedFine = fineRepository.findByReferenceNumber(referenceNumber.trim());
-
-            if (matchedFine.isPresent()) {
-                return ResponseEntity.ok(matchedFine.get());
-            } else {
-                return ResponseEntity.status(404).body("{\"message\": \"Fine not found for Reference: " + referenceNumber + "\"}");
-            }
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body("{\"message\": \"Server error during validation\"}");
-        }
->>>>>>> 08adce43f956666516f11b7cadb684be7a707499
     }
 }

@@ -154,11 +154,7 @@ export default function OfficerPortal() {
             </Box>
           </Box>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-<<<<<<< HEAD
             <Button variant="outlined" startIcon={<RefreshIcon />} onClick={loadOfficerFines} disabled={loadingFines} sx={{ fontWeight: 'bold' }}>Refresh</Button>
-=======
-           
->>>>>>> 08adce43f956666516f11b7cadb684be7a707499
             <LogoutButton sx={{ color: '#0f172a', borderColor: '#cbd5e1' }} />
           </Stack>
         </Box>
