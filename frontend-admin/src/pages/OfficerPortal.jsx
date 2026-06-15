@@ -22,7 +22,10 @@ const INITIAL_FORM_STATE = {
 
 export default function OfficerPortal() {
   const location = useLocation();
-  const currentOfficer = location.state?.currentOfficer || getOfficerProfile();
+
+  const currentOfficer = useMemo(() => {
+    return location.state?.currentOfficer || getOfficerProfile();
+  }, [location.state]);
 
   const [driverForm, setDriverForm] = useState(INITIAL_FORM_STATE);
   const [generatedToken, setGeneratedToken] = useState(null);
@@ -38,11 +41,12 @@ export default function OfficerPortal() {
 
   const [tokenHistory, setTokenHistory] = useState(() => getOfficerTokenHistory(currentOfficer?.id));
 
-  const loadOfficerFines = useCallback(async () => {
+  const loadOfficerFines = useCallback(async (isBackgroundCheck = false) => {
     if (!currentOfficer) return;
     try {
-      setLoadingFines(true);
+      if (!isBackgroundCheck) setLoadingFines(true); 
       setFineError('');
+      
       const data = await getOfficerFines();
       const normalizedFines = Array.isArray(data) ? data.map((fine) => ({
         id: fine.id,
@@ -57,33 +61,22 @@ export default function OfficerPortal() {
         driverName: fine.driverName || fine.driver?.fullName || 'N/A',
         driverPhone: fine.driverPhone || fine.phoneNumber || fine.driver?.phoneNumber || 'N/A',
       })) : [];
+      
       setOfficerFines(normalizedFines);
     } catch (error) {
       console.error('Error loading officer fines:', error);
-      setFineError('Failed to load issued tickets from database.');
+      if (!isBackgroundCheck) setFineError('Failed to load issued tickets from database.');
     } finally {
-      setLoadingFines(false);
+      if (!isBackgroundCheck) setLoadingFines(false);
     }
   }, [currentOfficer]);
 
-  useEffect(() => {
+    useEffect(() => {
+    if (!currentOfficer?.id) return;
+
+    setTokenHistory(getOfficerTokenHistory(currentOfficer.id));
     loadOfficerFines();
-  }, [loadOfficerFines]);
-
-  useEffect(() => {
-    const handleStorageChange = () => {
-      setTokenHistory(getOfficerTokenHistory(currentOfficer?.id));
-      loadOfficerFines();
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
   }, [currentOfficer?.id, loadOfficerFines]);
-
-  useEffect(() => {
-    const handleFocus = () => loadOfficerFines();
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [loadOfficerFines]);
 
   const paidFinesCount = useMemo(() => officerFines.filter((fine) => fine.status === 'PAID').length, [officerFines]);
   const pendingFinesCount = useMemo(() => officerFines.filter((fine) => fine.status !== 'PAID').length, [officerFines]);
@@ -129,7 +122,12 @@ export default function OfficerPortal() {
       };
 
       setTokenHistory(appendOfficerTokenHistory(currentOfficer.id, nextRecord));
-      setGeneratedToken({ ...driverToken, tokenCode, referenceNumber: fine?.referenceNumber });
+      setGeneratedToken({ 
+        ...driverToken, 
+        tokenCode, 
+        referenceNumber: fine?.referenceNumber,
+        driverName: driverForm.driverName
+      });
       setDriverForm(INITIAL_FORM_STATE);
       await loadOfficerFines();
     } catch (error) {
@@ -154,7 +152,15 @@ export default function OfficerPortal() {
             </Box>
           </Box>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-            <Button variant="outlined" startIcon={<RefreshIcon />} onClick={loadOfficerFines} disabled={loadingFines} sx={{ fontWeight: 'bold' }}>Refresh</Button>
+            <Button
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              onClick={() => loadOfficerFines()}
+              disabled={loadingFines}
+              sx={{ fontWeight: 'bold' }}
+              >
+              Refresh
+            </Button>
             <LogoutButton sx={{ color: '#0f172a', borderColor: '#cbd5e1' }} />
           </Stack>
         </Box>
@@ -165,7 +171,7 @@ export default function OfficerPortal() {
         {activeView === 'dashboard' && (
           <>
             <Grid container spacing={3} sx={{ mb: 3 }}>
-              <Grid item xs={12} sm={6}>
+              <Grid xs={12} sm={6}>
                 <Card elevation={3} sx={{ borderRadius: 3, borderLeft: '6px solid #2e7d32' }}>
                   <CardContent>
                     <Typography variant="subtitle2" color="textSecondary" sx={{ textTransform: 'uppercase' }} gutterBottom>Cleared to Return License</Typography>
@@ -173,7 +179,7 @@ export default function OfficerPortal() {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid xs={12} sm={6}>
                 <Card elevation={3} sx={{ borderRadius: 3, borderLeft: '6px solid #ed6c02' }}>
                   <CardContent>
                     <Typography variant="subtitle2" color="textSecondary" sx={{ textTransform: 'uppercase' }} gutterBottom>Pending Payments</Typography>
@@ -213,7 +219,7 @@ export default function OfficerPortal() {
                 </form>
                 {generatedToken && (
                   <Alert severity="success" sx={{ mt: 2, whiteSpace: 'pre-wrap' }}>
-                    Token generated for {generatedToken.username}. Share this 15-character token code with the driver:{'\n'}
+                    Token generated for {generatedToken.driverName}. Share this 15-character token code with the driver:{'\n'}
                     {generatedToken.tokenCode}{'\n'}
                     Reference No: {generatedToken.referenceNumber || 'Check table below'}{'\n'}
                     Officer ID: {currentOfficer.id}

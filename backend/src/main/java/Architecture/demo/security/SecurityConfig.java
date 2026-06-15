@@ -11,7 +11,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -45,41 +44,39 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
                         .requestMatchers("/api/v1/auth/me").authenticated()
 
-                        // Driver can check fine by reference number
-                        .requestMatchers(HttpMethod.GET, "/api/fines/reference/**")
-                        .hasAnyRole("DRIVER", "OFFICER", "ADMIN")
+                        // Drivers check fines by reference (Must be permitAll)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/fines/reference/**").permitAll()
+
+                        // Drivers pay fines (Must be permitAll)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/payments/**").permitAll()
 
                         // Officer can view own issued fines
-                        .requestMatchers(HttpMethod.GET, "/api/fines/officer/me")
-                        .hasAnyRole("OFFICER", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/fines/officer/me")
+                        .hasAnyAuthority("OFFICER", "ROLE_OFFICER", "ADMIN", "ROLE_ADMIN")
 
                         // Officer/Admin can view officer fines by id
-                        .requestMatchers(HttpMethod.GET, "/api/fines/officer/**")
-                        .hasAnyRole("OFFICER", "ADMIN")
-
-                        // Driver can pay fine
-                        .requestMatchers(HttpMethod.POST, "/api/payments/**")
-                        .hasAnyRole("DRIVER", "OFFICER", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/fines/officer/**")
+                        .hasAnyAuthority("OFFICER", "ROLE_OFFICER", "ADMIN", "ROLE_ADMIN")
 
                         // Admin APIs
                         .requestMatchers("/api/v1/admin/**")
-                        .hasRole("ADMIN")
+                        .hasAnyAuthority("ADMIN", "ROLE_ADMIN")
 
                         // Officer APIs
                         .requestMatchers("/api/v1/officer/**")
-                        .hasAnyRole("OFFICER", "ADMIN")
+                        .hasAnyAuthority("OFFICER", "ROLE_OFFICER", "ADMIN", "ROLE_ADMIN")
 
-                        // Driver APIs
+                        // Driver APIs (If you have a separate profile route)
                         .requestMatchers("/api/v1/driver/**")
-                        .hasRole("DRIVER")
+                        .hasAnyAuthority("DRIVER", "ROLE_DRIVER")
 
                         // Other fine APIs
-                        .requestMatchers("/api/fines/**")
-                        .hasAnyRole("OFFICER", "ADMIN")
+                        .requestMatchers("/api/v1/fines/**")
+                        .hasAnyAuthority("OFFICER", "ROLE_OFFICER", "ADMIN", "ROLE_ADMIN")
 
                         // Notifications
-                        .requestMatchers("/api/notifications/**")
-                        .hasAnyRole("OFFICER", "ADMIN")
+                        .requestMatchers("/api/v1/notifications/**")
+                        .hasAnyAuthority("OFFICER", "ROLE_OFFICER", "ADMIN", "ROLE_ADMIN")
 
                         // This must always be LAST
                         .anyRequest().authenticated()
