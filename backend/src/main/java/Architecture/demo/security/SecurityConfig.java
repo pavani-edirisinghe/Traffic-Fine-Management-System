@@ -11,7 +11,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,30 +23,68 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 public class SecurityConfig {
 
-    // --- THE NUCLEAR BYPASS ---
-    // This entirely ignores the JwtAuthenticationFilter for the specified routes.
     @Bean
-    public WebSecurityCustomizer webSecurityCustomizer() {
-        return (web) -> web.ignoring()
-                .requestMatchers("/api/v1/fines/**", "/api/v1/payments/**");
-    }
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            JwtAuthenticationFilter jwtAuthenticationFilter
+    ) throws Exception {
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter)
-            throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(sm ->
+                        sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
                 .authorizeHttpRequests(auth -> auth
+
+                        // CORS preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // Auth APIs
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
-                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/officer/**").hasAnyRole("OFFICER", "ADMIN")
-                        .requestMatchers("/api/v1/driver/**").hasRole("DRIVER")
+                        .requestMatchers("/api/v1/auth/me").authenticated()
+
+                        // Drivers check fines by reference (Must be permitAll)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/fines/reference/**").permitAll()
+
+                        // Drivers pay fines (Must be permitAll)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/payments/**").permitAll()
+
+                        // Officer can view own issued fines
+                        .requestMatchers(HttpMethod.GET, "/api/v1/fines/officer/me")
+                        .hasAnyAuthority("OFFICER", "ROLE_OFFICER", "ADMIN", "ROLE_ADMIN")
+
+                        // Officer/Admin can view officer fines by id
+                        .requestMatchers(HttpMethod.GET, "/api/v1/fines/officer/**")
+                        .hasAnyAuthority("OFFICER", "ROLE_OFFICER", "ADMIN", "ROLE_ADMIN")
+
+                        // Admin APIs
+                        .requestMatchers("/api/v1/admin/**")
+                        .hasAnyAuthority("ADMIN", "ROLE_ADMIN")
+
+                        // Officer APIs
+                        .requestMatchers("/api/v1/officer/**")
+                        .hasAnyAuthority("OFFICER", "ROLE_OFFICER", "ADMIN", "ROLE_ADMIN")
+
+                        // Driver APIs (If you have a separate profile route)
+                        .requestMatchers("/api/v1/driver/**")
+                        .hasAnyAuthority("DRIVER", "ROLE_DRIVER")
+
+                        // Other fine APIs
+                        .requestMatchers("/api/v1/fines/**")
+                        .hasAnyAuthority("OFFICER", "ROLE_OFFICER", "ADMIN", "ROLE_ADMIN")
+
+                        // Notifications
+                        .requestMatchers("/api/v1/notifications/**")
+                        .hasAnyAuthority("OFFICER", "ROLE_OFFICER", "ADMIN", "ROLE_ADMIN")
+
+                        // This must always be LAST
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(
+                        jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                );
 
         return http.build();
     }
@@ -58,8 +95,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration)
-            throws Exception {
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration authenticationConfiguration
+    ) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
     }
 
@@ -73,7 +111,9 @@ public class SecurityConfig {
                 .toList();
 
         CorsConfiguration config = new CorsConfiguration();
+
         config.setAllowedOrigins(origins);
+
         config.setAllowedMethods(List.of(
                 HttpMethod.GET.name(),
                 HttpMethod.POST.name(),
@@ -82,11 +122,19 @@ public class SecurityConfig {
                 HttpMethod.DELETE.name(),
                 HttpMethod.OPTIONS.name()
         ));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+
+        config.setAllowedHeaders(List.of(
+                "Authorization",
+                "Content-Type"
+        ));
+
         config.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
         source.registerCorsConfiguration("/**", config);
+
         return source;
     }
 }
