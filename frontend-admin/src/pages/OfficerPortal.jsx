@@ -16,8 +16,9 @@ import { appendOfficerTokenHistory, getOfficerProfile, getOfficerTokenHistory } 
 import { issueDriverToken, getOfficerFines } from '../services/api';
 import LogoutButton from '../components/LogoutButton';
 
+// 1. ADDED driverDistrict TO INITIAL STATE
 const INITIAL_FORM_STATE = {
-  driverName: '', phoneNumber: '', wrongDid: '', amount: '', vehicleNumber: '', licenseNumber: ''
+  driverName: '', phoneNumber: '', wrongDid: '', amount: '', vehicleNumber: '', licenseNumber: '', driverDistrict: ''
 };
 
 export default function OfficerPortal() {
@@ -114,6 +115,7 @@ export default function OfficerPortal() {
     setGeneratedToken(null);
 
     try {
+      // driverForm now includes driverDistrict
       const { driverToken, fine } = await issueDriverToken(driverForm);
       const tokenCode = crypto.randomUUID().replace(/-/g, '').slice(0, 15).toUpperCase();
       const nextRecord = {
@@ -209,8 +211,12 @@ export default function OfficerPortal() {
                     <Grid item xs={12} md={6}><TextField fullWidth label="Telephone Number" name="phoneNumber" value={driverForm.phoneNumber} onChange={handleDriverFormChange} required /></Grid>
                     <Grid item xs={12} md={6}><TextField fullWidth label="Violation" name="wrongDid" value={driverForm.wrongDid} onChange={handleDriverFormChange} required /></Grid>
                     <Grid item xs={12} md={6}><TextField fullWidth label="Fine Amount" name="amount" type="number" value={driverForm.amount} onChange={handleDriverFormChange} required /></Grid>
-                    <Grid item xs={12} md={6}><TextField fullWidth label="Vehicle Number" name="vehicleNumber" value={driverForm.vehicleNumber} onChange={handleDriverFormChange} /></Grid>
-                    <Grid item xs={12} md={6}><TextField fullWidth label="License Number" name="licenseNumber" value={driverForm.licenseNumber} onChange={handleDriverFormChange} /></Grid>
+                    
+                    {/* 2. RESTRUCTURED THIS ROW TO FIT 3 ITEMS (md={4} instead of md={6}) */}
+                    <Grid item xs={12} md={4}><TextField fullWidth label="Vehicle Number" name="vehicleNumber" value={driverForm.vehicleNumber} onChange={handleDriverFormChange} /></Grid>
+                    <Grid item xs={12} md={4}><TextField fullWidth label="License Number" name="licenseNumber" value={driverForm.licenseNumber} onChange={handleDriverFormChange} /></Grid>
+                    <Grid item xs={12} md={4}><TextField fullWidth label="Driver District" name="driverDistrict" value={driverForm.driverDistrict} onChange={handleDriverFormChange} required placeholder="e.g., Colombo" /></Grid>
+                    
                     <Grid item xs={12}>
                       {tokenError && <Alert severity="error" sx={{ mb: 1, mt: 1 }}>{tokenError}</Alert>}
                       <Button type="submit" variant="contained" disabled={issuingToken} sx={{ mt: 1 }}>{issuingToken ? 'Generating...' : 'Generate Driver Token'}</Button>
@@ -239,7 +245,7 @@ export default function OfficerPortal() {
                   <Table sx={{ minWidth: 1200 }} aria-label="saved driver tokens table">
                     <TableHead sx={{ backgroundColor: '#f1f5f9' }}>
                       <TableRow>
-                        {['Issued At', 'Driver Name', 'Phone Number', 'Reference No.', 'Violation', 'Amount', 'Token Code'].map((header) => (
+                        {['Issued At', 'Driver Name', 'Phone Number', 'District', 'Reference No.', 'Violation', 'Amount', 'Token Code'].map((header) => (
                           <TableCell key={header} sx={{ fontWeight: 'bold', color: '#475569' }}>{header}</TableCell>
                         ))}
                       </TableRow>
@@ -250,6 +256,7 @@ export default function OfficerPortal() {
                           <TableCell sx={{ color: '#64748b', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>{formatDate(row.savedAt)}</TableCell>
                           <TableCell sx={{ fontWeight: 'medium' }}>{row.driverName || 'N/A'}</TableCell>
                           <TableCell sx={{ color: '#475569' }}>{row.phoneNumber || 'N/A'}</TableCell>
+                          <TableCell sx={{ color: '#475569' }}>{row.driverDistrict || 'N/A'}</TableCell>
                           <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>{row.referenceNumber || 'N/A'}</TableCell>
                           <TableCell sx={{ maxWidth: 220 }}>{row.wrongDid || 'N/A'}</TableCell>
                           <TableCell><Typography variant="body2" fontWeight="medium">{formatAmount(row.amount)}</Typography></TableCell>

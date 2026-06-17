@@ -8,7 +8,6 @@ import {
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import EmailIcon from '@mui/icons-material/Email';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
-import { mockOfficers } from '../data/mockData';
 import { login, me } from '../services/api';
 import { clearAuth, setAuth, setDriverContext, setOfficerProfile } from '../services/auth';
 
@@ -55,12 +54,12 @@ export default function Login() {
       setAuth(data);
 
       if (data.role === 'OFFICER') {
-        const foundOfficer = mockOfficers.find((o) => o.email === data.username);
-        const officerProfile = foundOfficer || {
-          id: data.username,
-          name: data.username,
+        // Build the profile directly from the backend data
+        const officerProfile = {
+          id: data.id || data.username,
+          name: data.fullName || data.displayName || data.username,
           email: data.username,
-          district: 'Unknown',
+          district: data.district || 'Assigned District',
         };
         setOfficerProfile(officerProfile);
         navigate('/officer', { state: { currentOfficer: officerProfile } });
