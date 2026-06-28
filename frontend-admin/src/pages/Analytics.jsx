@@ -1,24 +1,18 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Box, Grid, Card, CardContent, Typography, MenuItem,
-  Select, FormControl, InputLabel, Chip, Divider, Stack
+  Select, FormControl, InputLabel, Chip, Divider, Stack, CircularProgress
 } from '@mui/material';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line
 } from 'recharts';
-import { mockFines } from '../data/mockData';
+
+// 1. IMPORT YOUR API FUNCTION
+import { getAllFines } from '../services/api';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const COLORS = ['#1976d2', '#2e7d32', '#ed6c02', '#d32f2f', '#7b1fa2', '#0097a7', '#f57f17', '#37474f'];
-
-const ALL_DISTRICTS = [...new Set(mockFines.map(f => f.district))].sort();
-const ALL_CATEGORIES = [...new Set(mockFines.map(f => f.categoryName))].sort();
-
-// Derive month options from data
-const ALL_MONTHS = [...new Set(
-  mockFines.map(f => f.dateIssued.slice(0, 7)) // "YYYY-MM"
-)].sort();
 
 // ─── Custom Tooltip ───────────────────────────────────────────────────────────
 const RevenueTooltip = ({ active, payload, label }) => {
@@ -28,7 +22,7 @@ const RevenueTooltip = ({ active, payload, label }) => {
         <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>{label}</Typography>
         {payload.map((p, i) => (
           <Typography key={i} variant="body2" sx={{ color: p.color }}>
-            {p.name}: Rs. {p.value?.toLocaleString()}
+            {p.name}: Rs. {Number(p.value || 0).toLocaleString()}
           </Typography>
         ))}
       </Box>
@@ -57,21 +51,59 @@ export default function Analytics() {
   const [monthFilter, setMonthFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
+  // 2. LIVE STATE & LOADING
+  const [fines, setFines] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // 3. FETCH DATA ON MOUNT
+  useEffect(() => {
+    const fetchFines = async () => {
+      try {
+        setLoading(true);
+        const data = await getAllFines();
+        setFines(data || []);
+      } catch (error) {
+        console.error('Failed to load analytics data:', error);
+        setFines([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchFines();
+  }, []);
+
+  // 4. DYNAMIC FILTER OPTIONS (Calculated automatically from live data)
+  const ALL_DISTRICTS = useMemo(() => [...new Set(fines.map(f => f.district || 'Unknown'))].sort(), [fines]);
+  const ALL_CATEGORIES = useMemo(() => [...new Set(fines.map(f => f.categoryName || 'Unknown'))].sort(), [fines]);
+  const ALL_MONTHS = useMemo(() => {
+    return [...new Set(
+      fines.map(f => {
+        const d = f.dateIssued || f.issuedAt;
+        return d ? d.slice(0, 7) : null;
+      }).filter(Boolean)
+    )].sort();
+  }, [fines]);
+
   // ── Filtered dataset ────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
-    return mockFines.filter(fine => {
-      if (districtFilter !== 'ALL' && fine.district !== districtFilter) return false;
-      if (categoryFilter !== 'ALL' && fine.categoryName !== categoryFilter) return false;
-      if (statusFilter !== 'ALL' && fine.status !== statusFilter) return false;
-      if (monthFilter !== 'ALL' && !fine.dateIssued.startsWith(monthFilter)) return false;
+    return fines.filter(fine => {
+      const dist = fine.district || 'Unknown';
+      const cat = fine.categoryName || 'Unknown';
+      const dateStr = fine.dateIssued || fine.issuedAt || '';
+      const status = fine.status || 'UNKNOWN';
+
+      if (districtFilter !== 'ALL' && dist !== districtFilter) return false;
+      if (categoryFilter !== 'ALL' && cat !== categoryFilter) return false;
+      if (statusFilter !== 'ALL' && status !== statusFilter) return false;
+      if (monthFilter !== 'ALL' && !dateStr.startsWith(monthFilter)) return false;
       return true;
     });
-  }, [districtFilter, categoryFilter, monthFilter, statusFilter]);
+  }, [fines, districtFilter, categoryFilter, monthFilter, statusFilter]);
 
   // ── KPI Metrics ─────────────────────────────────────────────────────────────
   const totalIssued = filtered.length;
-  const totalRevenue = filtered.filter(f => f.status === 'PAID').reduce((s, f) => s + f.amount, 0);
-  const pendingRevenue = filtered.filter(f => f.status === 'PENDING').reduce((s, f) => s + f.amount, 0);
+  const totalRevenue = filtered.filter(f => f.status === 'PAID').reduce((s, f) => s + (Number(f.amount) || 0), 0);
+  const pendingRevenue = filtered.filter(f => f.status === 'PENDING').reduce((s, f) => s + (Number(f.amount) || 0), 0);
   const collectionRate = totalIssued
     ? Math.round((filtered.filter(f => f.status === 'PAID').length / totalIssued) * 100)
     : 0;
@@ -80,9 +112,12 @@ export default function Analytics() {
   const districtData = useMemo(() => {
     const map = {};
     filtered.forEach(fine => {
-      if (!map[fine.district]) map[fine.district] = { name: fine.district, Collected: 0, Pending: 0 };
-      if (fine.status === 'PAID') map[fine.district].Collected += fine.amount;
-      else map[fine.district].Pending += fine.amount;
+      const dist = fine.district || 'Unknown';
+      const amt = Number(fine.amount) || 0;
+      if (!map[dist]) map[dist] = { name: dist, Collected: 0, Pending: 0 };
+      
+      if (fine.status === 'PAID') map[dist].Collected += amt;
+      else map[dist].Pending += amt;
     });
     return Object.values(map).sort((a, b) => b.Collected - a.Collected);
   }, [filtered]);
@@ -91,8 +126,9 @@ export default function Analytics() {
   const categoryData = useMemo(() => {
     const map = {};
     filtered.forEach(fine => {
-      if (!map[fine.categoryName]) map[fine.categoryName] = { name: fine.categoryName, count: 0 };
-      map[fine.categoryName].count += 1;
+      const cat = fine.categoryName || 'Unknown';
+      if (!map[cat]) map[cat] = { name: cat, count: 0 };
+      map[cat].count += 1;
     });
     return Object.values(map).sort((a, b) => b.count - a.count);
   }, [filtered]);
@@ -100,21 +136,26 @@ export default function Analytics() {
   // ── Monthly Trend Line Chart ─────────────────────────────────────────────────
   const trendData = useMemo(() => {
     const map = {};
-    mockFines.forEach(fine => { // always show all months for trend context
-      const month = fine.dateIssued.slice(0, 7);
+    fines.forEach(fine => { 
+      const dateStr = fine.dateIssued || fine.issuedAt;
+      if (!dateStr) return; 
+      const month = dateStr.slice(0, 7);
+      const amt = Number(fine.amount) || 0;
+
       if (!map[month]) map[month] = { month, Revenue: 0, Fines: 0 };
-      if (fine.status === 'PAID') map[month].Revenue += fine.amount;
+      if (fine.status === 'PAID') map[month].Revenue += amt;
       map[month].Fines += 1;
     });
     return Object.values(map).sort((a, b) => a.month.localeCompare(b.month));
-  }, []);
+  }, [fines]);
 
   // ── Top Category by Revenue ──────────────────────────────────────────────────
   const topCategory = useMemo(() => {
     const map = {};
     filtered.filter(f => f.status === 'PAID').forEach(f => {
-      if (!map[f.categoryName]) map[f.categoryName] = 0;
-      map[f.categoryName] += f.amount;
+      const cat = f.categoryName || 'Unknown';
+      if (!map[cat]) map[cat] = 0;
+      map[cat] += Number(f.amount) || 0;
     });
     const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]);
     return sorted[0] ? sorted[0][0] : '—';
@@ -122,10 +163,17 @@ export default function Analytics() {
 
   const isFiltered = districtFilter !== 'ALL' || categoryFilter !== 'ALL' || monthFilter !== 'ALL' || statusFilter !== 'ALL';
 
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
 
-      {/* ── Page Header ── */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Analytics</Typography>
         {isFiltered && (
@@ -216,13 +264,14 @@ export default function Analytics() {
 
       {/* ── Charts Row 1 ── */}
       <Grid container spacing={3}>
-        {/* District Revenue Stacked Bar */}
-        <Grid item xs={12} md={7}>
-          <Card elevation={2} sx={{ p: 2, height: 370 }}>
+        
+        {/* District Revenue Stacked Bar - Set to lg={5} so it takes less space on big screens */}
+        <Grid item xs={12} md={5} lg={5}>
+          <Card elevation={2} sx={{ p: 2, height: 420,  }}>
             <Typography variant="h6" align="center" sx={{ mb: 2 }}>District-Wise Collection</Typography>
             <Divider sx={{ mb: 2 }} />
-            <ResponsiveContainer width="100%" height={270}>
-              <BarChart data={districtData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart data={districtData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
@@ -235,31 +284,34 @@ export default function Analytics() {
           </Card>
         </Grid>
 
-        {/* Category Pie */}
-        <Grid item xs={12} md={5}>
-          <Card elevation={2} sx={{ p: 2, height: 370, display: 'flex', flexDirection: 'column' }}>
-            <Typography variant="h6" align="center" sx={{ mb: 2 }}>Fine Categories</Typography>
+        {/* Category Pie - WIDENED TO lg={7} AND REMOVED BAD MARGINS */}
+        <Grid item xs={12} md={7} lg={7} padding left={10}>
+          <Card elevation={2} sx={{ p: 2, display: 'flex', flexDirection: 'column', height: 420, width: '300%' }}>
+            <Typography variant="h6" align="center" sx={{ mb: 1 }}>Fine Categories</Typography>
             <Divider sx={{ mb: 2 }} />
-            <Box sx={{ flexGrow: 1 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={categoryData}
-                    cx="50%" cy="45%"
-                    innerRadius="40%" outerRadius="70%"
-                    paddingAngle={4}
+            <Box sx={{ flexGrow: 1, width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              <ResponsiveContainer width="200%" height={320}>
+                {/* Safe, small margins so the pie chart doesn't get crushed to 0 pixels */}
+                <PieChart margin={{ top: 1, right: 1, bottom: 1, left: 1 }}>
+                  <Pie 
+                    data={categoryData} 
+                    cx="50%" 
+                    cy="50%" 
+                    innerRadius={60} 
+                    outerRadius={110} 
+                    paddingAngle={3} 
                     dataKey="count"
-                    label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
-                    labelLine={false}
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    labelLine={true}
                   >
-                    {categoryData.map((_, index) => (
-                      <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                    {categoryData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value, name) => [`${value} fines`, name]} />
-                  <Legend
-                    verticalAlign="bottom"
-                    wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
+                  <Tooltip formatter={(value, name) => [`${value} violations`, name]} />
+                  <Legend 
+                    verticalAlign="bottom" 
+                    wrapperStyle={{ fontSize: '13px', paddingTop: '10px' }} 
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -304,10 +356,10 @@ export default function Analytics() {
             </thead>
             <tbody>
               {ALL_CATEGORIES.map((cat, i) => {
-                const rows = filtered.filter(f => f.categoryName === cat);
+                const rows = filtered.filter(f => (f.categoryName || 'Unknown') === cat);
                 const paid = rows.filter(f => f.status === 'PAID');
                 const pending = rows.filter(f => f.status === 'PENDING');
-                const revenue = paid.reduce((s, f) => s + f.amount, 0);
+                const revenue = paid.reduce((s, f) => s + (Number(f.amount) || 0), 0);
                 const rate = rows.length ? Math.round((paid.length / rows.length) * 100) : 0;
                 if (rows.length === 0) return null;
                 return (

@@ -10,14 +10,42 @@ const apiClient = axios.create({
   },
 });
 
-apiClient.interceptors.request.use((config) => {
+const getCleanToken = () => {
   const token = getAccessToken();
-  if (token) {
-    config.headers = config.headers || {};
-    config.headers.Authorization = `Bearer ${token}`;
+  if (!token) return null;
+  if (typeof token === 'string' && token.startsWith('Bearer ')) {
+    return token.substring(7);
   }
-  return config;
-});
+  if (typeof token === 'string' && token.split('.').length === 3) {
+    return token;
+  }
+  return null;
+};
+
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = getCleanToken();
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      console.error('401 Unauthorized: Please login again.');
+    }
+    if (error.response?.status === 403) {
+      console.error('403 Forbidden: Logged-in user role/token is not allowed.');
+    }
+    return Promise.reject(error);
+  }
+);
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 export const login = async ({ username, password }) => {
@@ -90,13 +118,9 @@ export const markNotificationAsRead = async (notificationId) => {
   return response.data;
 };
 
-// Legacy fine issuance used by IssueTicket.jsx (admin selects driver by ID)
-export const issueFine = async (driverId, officerId, amount, description) => {
-  const response = await apiClient.post(
-    'http://localhost:8080/api/fines/issue',
-    null,
-    { params: { driverId, officerId, amount, description } }
-  );
+// ── Fines (public) ────────────────────────────────────────────────────────────
+export const getFineByReferenceNumber = async (referenceNumber) => {
+  const response = await apiClient.get(`/fines/reference/${encodeURIComponent(referenceNumber)}`);
   return response.data;
 };
 
@@ -110,5 +134,17 @@ export const payFine = async (fineId, method = 'ONLINE') => {
   const response = await apiClient.post(`/driver/pay/${fineId}`, null, {
     params: { method },
   });
+  return response.data;
+};
+
+export const payFineById = payFine;
+
+// ── Legacy ────────────────────────────────────────────────────────────────────
+export const issueFine = async (driverId, officerId, amount, description) => {
+  const response = await apiClient.post(
+    'http://localhost:8080/api/fines/issue',
+    null,
+    { params: { driverId, officerId, amount, description } }
+  );
   return response.data;
 };

@@ -5,59 +5,75 @@ class LocalStorageDataSource {
   static const String _userKey = 'user_data';
   static const String _paymentsKey = 'offline_payments';
 
-  late SharedPreferences _prefs;
+  // We keep an empty initialize method just in case main.dart calls it on boot, 
+  // so the app doesn't crash looking for a missing function.
+  Future<void> initialize() async {}
 
-  Future<void> initialize() async {
-    _prefs = await SharedPreferences.getInstance();
-  }
-
-  // Token Management
+  // --- Token Management ---
   Future<void> saveToken(String token) async {
-    await _prefs.setString(_tokenKey, token);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tokenKey, token); 
   }
 
-  String? getToken() => _prefs.getString(_tokenKey);
-
-  Future<void> removeToken() async {
-    await _prefs.remove(_tokenKey);
+  Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_tokenKey);
   }
 
-  // User Data
+  Future<void> deleteToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_tokenKey);
+  }
+
+  // --- User Data ---
   Future<void> saveUserData(String userData) async {
-    await _prefs.setString(_userKey, userData);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_userKey, userData);
   }
 
-  String? getUserData() => _prefs.getString(_userKey);
+  Future<String?> getUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_userKey);
+  }
 
   Future<void> removeUserData() async {
-    await _prefs.remove(_userKey);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_userKey);
   }
 
-  // Offline Payments
+  // --- Offline Payments ---
   Future<void> saveOfflinePayment(String paymentData) async {
-    final List<String> payments = _prefs.getStringList(_paymentsKey) ?? [];
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> payments = prefs.getStringList(_paymentsKey) ?? [];
     payments.add(paymentData);
-    await _prefs.setStringList(_paymentsKey, payments);
+    await prefs.setStringList(_paymentsKey, payments);
   }
 
   Future<void> saveOfflinePayments(List<String> paymentData) async {
-    await _prefs.setStringList(_paymentsKey, paymentData);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_paymentsKey, paymentData);
   }
 
-  List<String>? getOfflinePayments() => _prefs.getStringList(_paymentsKey);
+  Future<List<String>?> getOfflinePayments() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(_paymentsKey);
+  }
 
   Future<void> removeOfflinePayment(String paymentData) async {
-    final List<String> payments = _prefs.getStringList(_paymentsKey) ?? [];
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> payments = prefs.getStringList(_paymentsKey) ?? [];
     payments.remove(paymentData);
-    await _prefs.setStringList(_paymentsKey, payments);
+    await prefs.setStringList(_paymentsKey, payments);
   }
 
   Future<void> clearOfflinePayments() async {
-    await _prefs.remove(_paymentsKey);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_paymentsKey);
   }
 
-  // Clear All Data
+  // --- Clear All Data ---
   Future<void> clearAll() async {
-    await _prefs.clear();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
   }
 }

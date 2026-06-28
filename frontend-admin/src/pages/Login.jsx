@@ -8,16 +8,15 @@ import {
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import EmailIcon from '@mui/icons-material/Email';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
-import { mockOfficers } from '../data/mockData';
 import { login, me } from '../services/api';
-import { clearAuth, parseJwtPayload, resolveIssuedDriverToken, setAuth, setDriverContext, setOfficerProfile } from '../services/auth';
+import { clearAuth, setAuth, setDriverContext, setOfficerProfile } from '../services/auth';
 
 export default function Login() {
   const navigate = useNavigate();
   const [role, setRole] = useState('ADMIN');
   
-  // For officers: input1 = email, input2 = password
-  // For drivers: input1 = reference number, input2 = category identifier
+  // For officers/admins: input1 = username, input2 = password
+  // For drivers: input1 = reference number (input2 is not used)
   const [input1, setInput1] = useState('');
   const [input2, setInput2] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -30,38 +29,37 @@ export default function Login() {
     try {
       clearAuth();
 
+      // Driver Login Flow
       if (isDriver) {
-        const tokenInput = input1.trim();
-        if (!tokenInput) {
-          alert('Please paste the access token given by the officer.');
+        const refNumber = input1.trim();
+        
+        if (!refNumber) {
+          alert('Please enter your Reference Number.');
           return;
         }
 
-        const resolvedToken = resolveIssuedDriverToken(tokenInput);
-
-        // Temporarily store token so api client can call /auth/me
-        setAuth({ accessToken: resolvedToken, tokenType: 'Bearer', username: '', role: 'DRIVER', expiresInSeconds: 0 });
-        const profile = await me();
-        setAuth({ accessToken: resolvedToken, tokenType: 'Bearer', username: profile.username, role: profile.role, expiresInSeconds: 0 });
-
-        const payload = parseJwtPayload(resolvedToken);
-        const driverCtx = payload || {};
+        // Set a basic driver session context so the driver portal can fetch the fine
+        const driverCtx = { referenceNumber: refNumber };
+        
+        // Temporarily assign a placeholder token/role so the frontend knows a driver is "logged in"
+        setAuth({ accessToken: 'driver-session-active', tokenType: 'Bearer', username: 'Driver', role: 'DRIVER', expiresInSeconds: 0 });
         setDriverContext(driverCtx);
+        
         navigate('/driver', { state: driverCtx });
         return;
       }
 
+      // Officer/Admin Login Flow
       const data = await login({ username: input1, password: input2 });
       setAuth(data);
 
-      // Preserve existing portal UX by saving context used by current pages
       if (data.role === 'OFFICER') {
-        const foundOfficer = mockOfficers.find((o) => o.email === data.username);
-        const officerProfile = foundOfficer || {
-          id: data.username,
-          name: data.username,
+        // Build the profile directly from the backend data
+        const officerProfile = {
+          id: data.id || data.username,
+          name: data.fullName || data.displayName || data.username,
           email: data.username,
-          district: 'Unknown',
+          district: data.district || 'Assigned District',
         };
         setOfficerProfile(officerProfile);
         navigate('/officer', { state: { currentOfficer: officerProfile } });
@@ -73,9 +71,6 @@ export default function Login() {
         return;
       }
 
-      if (data.role === 'DRIVER') {
-        alert('Driver access uses an officer-issued token. Choose DRIVER role and paste the token.');
-      }
     } catch (error) {
       console.error('Login failed:', error);
       clearAuth();
@@ -136,13 +131,13 @@ export default function Login() {
               </Select>
             </FormControl>
 
-            {/* FIELD 1 */}
+            {/* FIELD 1: Username OR Reference Number */}
             <TextField
               fullWidth
-              label={isDriver ? "Access Token" : "Email Address"}
-              placeholder={isDriver ? "Paste token from the officer" : "e.g., officer@police.lk"}
+              label={isDriver ? "Reference Number" : "Username"}
+              placeholder={isDriver ? "e.g., TF-2026-2F4C1B" : "Enter your username"}
               variant="outlined"
-              sx={{ mb: 3 }}
+              sx={{ mb: isDriver ? 4 : 3 }} // Extra margin if it's the only field
               required
               value={input1}
               onChange={(e) => setInput1(e.target.value)}
@@ -157,8 +152,8 @@ export default function Login() {
               }}
             />
 
-            {/* FIELD 2 */}
-            {!isDriver ? (
+            {/* FIELD 2: Password (HIDDEN FOR DRIVER) */}
+            {!isDriver && (
               <TextField
                 fullWidth
                 label="Password"
@@ -179,7 +174,7 @@ export default function Login() {
                   },
                 }}
               />
-            ) : null}
+            )}
 
             <Button 
               type="submit" 
@@ -192,9 +187,10 @@ export default function Login() {
               Sign In
             </Button>
 
-
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, textAlign: 'center' }}>
-              Officer accounts are created by admins. Drivers sign in with an officer-issued token.
+              {isDriver 
+                ? "Drivers can sign in using only their fine Reference Number." 
+                : "Officer accounts are created by admins."}
             </Typography>
           </form>
 

@@ -29,6 +29,7 @@ public class FineService {
         fine.setCategoryIdentifier(catId);
 
         fine.setCategoryName(isBlank(request.wrongDid()) ? catId : request.wrongDid().trim());
+
         fine.setDriver(driver);
         fine.setOfficer(officer);
         fine.setAmount(parseAmount(request.amount()));
@@ -36,7 +37,7 @@ public class FineService {
         fine.setDriverLicense(isBlank(request.licenseNumber()) ? null : request.licenseNumber().trim());
         fine.setDriverName(request.driverName().trim());
         fine.setDriverPhone(request.phoneNumber().trim());
-        fine.setDistrict(isBlank(request.district()) ? null : request.district().trim());
+        fine.setDistrict(isBlank(officer.getDistrict()) ? null : officer.getDistrict());
         fine.setStatus(FineStatus.UNPAID);
 
         return fineRepository.save(fine);

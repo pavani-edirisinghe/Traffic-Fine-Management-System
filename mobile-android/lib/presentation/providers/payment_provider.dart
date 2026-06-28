@@ -28,16 +28,15 @@ class PaymentProvider extends ChangeNotifier {
 
   Future<bool> validateFine({
     required String referenceNumber,
-    required String categoryId,
   }) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
+      // Stripped categoryId to match the updated FineRepository
       _currentFine = await _fineRepository.validateFine(
         referenceNumber: referenceNumber,
-        categoryId: categoryId,
       );
       _isLoading = false;
       notifyListeners();

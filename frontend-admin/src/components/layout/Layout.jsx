@@ -12,19 +12,16 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Define the navigation architecture
   const menuItems = [
-  { text: 'Dashboard', icon: <DashboardIcon />, path: '/admin' },
-  { text: 'Transactions', icon: <ReceiptLongIcon />, path: '/admin/transactions' },
-  { text: 'Analytics', icon: <BarChartIcon />, path: '/admin/analytics' },
-  { text: 'Manage Officers', icon: <LocalPoliceIcon />, path: '/admin/officers' }, // <-- ADD THIS LINE
-];
+    { text: 'Dashboard', icon: <DashboardIcon />, path: '/admin' },
+    { text: 'Transactions', icon: <ReceiptLongIcon />, path: '/admin/transactions' },
+    { text: 'Analytics', icon: <BarChartIcon />, path: '/admin/analytics' },
+    { text: 'Manage Officers', icon: <LocalPoliceIcon />, path: '/admin/officers' },
+  ];
 
   return (
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
-      
-      {/* Top Navigation Bar */}
       <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, backgroundColor: '#1976d2' }}>
         <Toolbar>
           <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold', letterSpacing: 1 }}>
@@ -35,7 +32,6 @@ export default function Layout() {
         </Toolbar>
       </AppBar>
 
-      {/* Side Navigation Drawer (Upgraded to Dark Mode) */}
       <Drawer
         variant="permanent"
         sx={{
@@ -44,13 +40,13 @@ export default function Layout() {
           [`& .MuiDrawer-paper`]: { 
             width: drawerWidth, 
             boxSizing: 'border-box',
-            backgroundColor: '#1e293b', // Professional dark slate background
-            color: '#f8fafc', // Light text
+            backgroundColor: '#1e293b',
+            color: '#f8fafc',
             borderRight: 'none'
           },
         }}
       >
-        <Toolbar /> {/* Spacer */}
+        <Toolbar /> 
         <Box sx={{ overflow: 'auto', mt: 2 }}>
           <List>
             {menuItems.map((item) => (
@@ -59,22 +55,22 @@ export default function Layout() {
                   selected={location.pathname === item.path}
                   onClick={() => navigate(item.path)}
                   sx={{
-                    mx: 1, // Margin to make the highlight look like a rounded button
+                    mx: 1,
                     borderRadius: 1,
                     mb: 0.5,
-                    '&.Mui-selected': {
-                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                      borderLeft: '4px solid #60a5fa', // Blue accent indicator
-                    },
-                    '&:hover': {
-                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                    }
+                    '&.Mui-selected': { backgroundColor: 'rgba(255, 255, 255, 0.1)', borderLeft: '4px solid #60a5fa' },
+                    '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.05)' }
                   }}
                 >
                   <ListItemIcon sx={{ color: location.pathname === item.path ? '#60a5fa' : '#94a3b8', minWidth: 40 }}>
                     {item.icon}
                   </ListItemIcon>
-                  <ListItemText primary={item.text} primaryTypographyProps={{ fontWeight: location.pathname === item.path ? 'bold' : 'medium' }} />
+                  <ListItemText 
+                    primary={item.text} 
+                    slotProps={{
+                      primary: { style: { fontWeight: location.pathname === item.path ? 'bold' : '500' } }
+                    }} 
+                  />
                 </ListItemButton>
               </ListItem>
             ))}
@@ -82,10 +78,8 @@ export default function Layout() {
         </Box>
       </Drawer>
 
-      {/* Main Content Area */}
-      {/* 2. Tell the main content area it can scroll vertically (overflowY: 'auto') */}
-      <Box component="main" sx={{ flexGrow: 1, p: 3, height: '100%', overflowY: 'auto' }}>
-        <Toolbar /> {/* Spacer */}
+      <Box component="main" sx={{ flexGrow: 1, p: 3, height: '100vh', overflowY: 'auto' }}>
+        <Toolbar /> 
         <Outlet /> 
       </Box>
     </Box>

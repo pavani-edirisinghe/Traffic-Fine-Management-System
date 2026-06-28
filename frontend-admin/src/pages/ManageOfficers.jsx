@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box, Typography, Card, CardContent, TextField, Button,
-  Grid, Snackbar, Alert, Divider
+  Grid, Snackbar, Alert, Divider, Paper,
+  Table, TableBody, TableCell, TableHead, TableRow
 } from '@mui/material';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
-import { createOfficer } from '../services/api';
+import { createOfficer, getOfficers } from '../services/api';
 
 export default function ManageOfficers() {
   const [formData, setFormData] = useState({
@@ -15,8 +16,22 @@ export default function ManageOfficers() {
     phoneNumber: '',
     district: '',
   });
+  const [officers, setOfficers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, severity: 'success', message: '' });
+
+  useEffect(() => {
+    fetchOfficers();
+  }, []);
+
+  const fetchOfficers = async () => {
+    try {
+      const data = await getOfficers();
+      setOfficers(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Failed to load officers', err);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -40,6 +55,7 @@ export default function ManageOfficers() {
         message: `Officer "${result.username}" created. Temporary password: ${result.temporaryPassword}`,
       });
       setFormData({ fullName: '', badgeId: '', username: '', password: '', phoneNumber: '', district: '' });
+      fetchOfficers();
     } catch (err) {
       const msg = err?.response?.data?.message || err?.response?.data || 'Failed to create officer.';
       setSnackbar({ open: true, severity: 'error', message: msg });
@@ -146,6 +162,36 @@ export default function ManageOfficers() {
           </Card>
         </Grid>
       </Grid>
+
+      {officers.length > 0 && (
+        <Paper elevation={2}>
+          <Box sx={{ p: 2, borderBottom: '1px solid #e2e8f0' }}>
+            <Typography variant="h6" fontWeight="bold">Registered Officers</Typography>
+          </Box>
+          <Table>
+            <TableHead sx={{ backgroundColor: '#f1f5f9' }}>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 'bold' }}>Full Name</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Badge ID</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Username</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>District</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Phone</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {officers.map((o) => (
+                <TableRow key={o.id}>
+                  <TableCell>{o.fullName || o.displayName || 'N/A'}</TableCell>
+                  <TableCell>{o.badgeId || 'N/A'}</TableCell>
+                  <TableCell>{o.username}</TableCell>
+                  <TableCell>{o.district || 'N/A'}</TableCell>
+                  <TableCell>{o.phoneNumber || 'N/A'}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Paper>
+      )}
 
       <Snackbar
         open={snackbar.open}

@@ -2,6 +2,7 @@ package Architecture.demo.fines;
 
 import Architecture.demo.auth.AppUser;
 import jakarta.persistence.*;
+
 import java.time.LocalDateTime;
 import java.time.Year;
 import java.util.UUID;
@@ -62,57 +63,170 @@ public class Fine {
     @Column
     private LocalDateTime paidAt;
 
+    @PrePersist
+    void prePersist() {
+        if (referenceNumber == null || referenceNumber.isBlank()) {
+            referenceNumber = generateReferenceNumber();
+        }
+
+        if (categoryIdentifier == null || categoryIdentifier.isBlank()) {
+            categoryIdentifier = "GENERAL";
+        }
+
+        if (issuedAt == null) {
+            issuedAt = LocalDateTime.now();
+        }
+
+        if (status == null) {
+            status = FineStatus.UNPAID;
+        }
+    }
+
     public static String generateReferenceNumber() {
         String year = String.valueOf(Year.now().getValue());
-        String uid = UUID.randomUUID().toString().replace("-", "").substring(0, 6).toUpperCase();
+        String uid = UUID.randomUUID()
+                .toString()
+                .replace("-", "")
+                .substring(0, 6)
+                .toUpperCase();
+
         return "TF-" + year + "-" + uid;
     }
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public String getReferenceNumber() { return referenceNumber; }
-    public void setReferenceNumber(String referenceNumber) { this.referenceNumber = referenceNumber; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public String getCategoryIdentifier() { return categoryIdentifier; }
-    public void setCategoryIdentifier(String categoryIdentifier) { this.categoryIdentifier = categoryIdentifier; }
+    public String getReferenceNumber() {
+        return referenceNumber;
+    }
 
-    public String getCategoryName() { return categoryName; }
-    public void setCategoryName(String categoryName) { this.categoryName = categoryName; }
+    public void setReferenceNumber(String referenceNumber) {
+        this.referenceNumber = referenceNumber;
+    }
 
-    public AppUser getDriver() { return driver; }
-    public void setDriver(AppUser driver) { this.driver = driver; }
+    public String getCategoryIdentifier() {
+        return categoryIdentifier;
+    }
 
-    public AppUser getOfficer() { return officer; }
-    public void setOfficer(AppUser officer) { this.officer = officer; }
+    public void setCategoryIdentifier(String categoryIdentifier) {
+        this.categoryIdentifier = categoryIdentifier;
+    }
 
-    public Double getAmount() { return amount; }
-    public void setAmount(Double amount) { this.amount = amount; }
+    public String getCategoryName() {
+        return categoryName;
+    }
 
-    public String getVehicleNumber() { return vehicleNumber; }
-    public void setVehicleNumber(String vehicleNumber) { this.vehicleNumber = vehicleNumber; }
+    public void setCategoryName(String categoryName) {
+        this.categoryName = categoryName;
+    }
 
-    public String getDriverLicense() { return driverLicense; }
-    public void setDriverLicense(String driverLicense) { this.driverLicense = driverLicense; }
+    public AppUser getDriver() {
+        return driver;
+    }
 
-    public String getDistrict() { return district; }
-    public void setDistrict(String district) { this.district = district; }
+    public void setDriver(AppUser driver) {
+        this.driver = driver;
+    }
 
-    public String getDriverName() { return driverName; }
-    public void setDriverName(String driverName) { this.driverName = driverName; }
+    public AppUser getOfficer() {
+        return officer;
+    }
 
-    public String getDriverPhone() { return driverPhone; }
-    public void setDriverPhone(String driverPhone) { this.driverPhone = driverPhone; }
+    public void setOfficer(AppUser officer) {
+        this.officer = officer;
+    }
 
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public Double getAmount() {
+        return amount;
+    }
 
-    public FineStatus getStatus() { return status; }
-    public void setStatus(FineStatus status) { this.status = status; }
+    public void setAmount(Double amount) {
+        this.amount = amount;
+    }
 
-    public LocalDateTime getIssuedAt() { return issuedAt; }
-    public void setIssuedAt(LocalDateTime issuedAt) { this.issuedAt = issuedAt; }
+    public String getVehicleNumber() {
+        return vehicleNumber;
+    }
 
-    public LocalDateTime getPaidAt() { return paidAt; }
-    public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
+    public void setVehicleNumber(String vehicleNumber) {
+        this.vehicleNumber = vehicleNumber;
+    }
+
+    public String getDriverLicense() {
+        return driverLicense;
+    }
+
+    public void setDriverLicense(String driverLicense) {
+        this.driverLicense = driverLicense;
+    }
+
+    public String getDistrict() {
+        return district;
+    }
+
+    public void setDistrict(String district) {
+        this.district = district;
+    }
+
+    public String getDriverName() {
+        return driverName;
+    }
+
+    public void setDriverName(String driverName) {
+        this.driverName = driverName;
+    }
+
+    public String getDriverPhone() {
+        return driverPhone;
+    }
+
+    public void setDriverPhone(String driverPhone) {
+        this.driverPhone = driverPhone;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public FineStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(FineStatus status) {
+        this.status = status;
+    }
+
+    public LocalDateTime getIssuedAt() {
+        return issuedAt;
+    }
+
+    public void setIssuedAt(LocalDateTime issuedAt) {
+        this.issuedAt = issuedAt;
+    }
+
+    public LocalDateTime getPaidAt() {
+        return paidAt;
+    }
+
+    public void setPaidAt(LocalDateTime paidAt) {
+        this.paidAt = paidAt;
+    }
+
+    // Extra methods for compatibility with older controller/payment code
+    public LocalDateTime getDatePaid() {
+        return paidAt;
+    }
+
+    public void setDatePaid(LocalDateTime datePaid) {
+        this.paidAt = datePaid;
+    }
 }

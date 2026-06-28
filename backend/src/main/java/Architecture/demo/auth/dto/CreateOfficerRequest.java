@@ -1,9 +1,10 @@
 package Architecture.demo.auth.dto;
 
 public record CreateOfficerRequest(
-        String username,
-        String password,
-        String displayName,
-        String phoneNumber
-) {
-}
+    String username,
+    String password,
+    String fullName,
+    String badgeId,
+    String phoneNumber,
+    String district
+) {}

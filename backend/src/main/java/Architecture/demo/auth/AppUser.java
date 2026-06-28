@@ -34,6 +34,14 @@ public class AppUser implements UserDetails {
 
 	@Column
 	private String phoneNumber;
+	@Column
+private String fullName;
+
+@Column
+private String badgeId;
+
+@Column
+private String district;
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
@@ -47,15 +55,23 @@ public class AppUser implements UserDetails {
 		this.password = password;
 		this.role = role;
 	}
-
-	public AppUser(String username, String password, String displayName, String phoneNumber, Role role) {
-		this.username = username;
-		this.password = password;
-		this.displayName = displayName;
-		this.phoneNumber = phoneNumber;
-		this.role = role;
-	}
-
+public AppUser(String username, String password, String fullName, String badgeId, String phoneNumber, String district, Role role) {
+    this.username = username;
+    this.password = password;
+    this.fullName = fullName;
+    this.badgeId = badgeId;
+    this.phoneNumber = phoneNumber;
+    this.district = district;
+    this.role = role;
+}
+// In AppUser.java
+public AppUser(String username, String password, String displayName, String phoneNumber, Role role) {
+    this.username = username;
+    this.password = password;
+    this.displayName = displayName;
+    this.phoneNumber = phoneNumber;
+    this.role = role;
+}
 	public Long getId() {
 		return id;
 	}
@@ -105,7 +121,14 @@ public class AppUser implements UserDetails {
 	public void setRole(Role role) {
 		this.role = role;
 	}
+public String getFullName() { return fullName; }
+public void setFullName(String fullName) { this.fullName = fullName; }
 
+public String getBadgeId() { return badgeId; }
+public void setBadgeId(String badgeId) { this.badgeId = badgeId; }
+
+public String getDistrict() { return district; }
+public void setDistrict(String district) { this.district = district; }
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
 		return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
