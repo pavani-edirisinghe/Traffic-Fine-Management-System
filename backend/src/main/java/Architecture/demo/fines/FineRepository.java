@@ -10,6 +10,8 @@ public interface FineRepository extends JpaRepository<Fine, Long> {
 
     Optional<Fine> findByReferenceNumber(String referenceNumber);
 
+    Optional<Fine> findByReferenceNumberAndCategoryIdentifier(String referenceNumber, String categoryIdentifier);
+
     List<Fine> findAllByDriver(AppUser driver);
 
     List<Fine> findAllByOfficer(AppUser officer);

@@ -8,6 +8,7 @@ import java.util.List;
 
 @Service
 public class FineService {
+
     private final FineRepository fineRepository;
 
     public FineService(FineRepository fineRepository) {
@@ -26,6 +27,7 @@ public class FineService {
                 ? slugify(request.wrongDid())
                 : request.categoryIdentifier().trim();
         fine.setCategoryIdentifier(catId);
+
         fine.setCategoryName(isBlank(request.wrongDid()) ? catId : request.wrongDid().trim());
 
         fine.setDriver(driver);
@@ -51,7 +53,11 @@ public class FineService {
 
     private static double parseAmount(String amount) {
         if (isBlank(amount)) return 0.0;
-        try { return Double.parseDouble(amount.trim()); } catch (NumberFormatException e) { return 0.0; }
+        try {
+            return Double.parseDouble(amount.trim());
+        } catch (NumberFormatException e) {
+            return 0.0;
+        }
     }
 
     private static String slugify(String value) {
@@ -59,5 +65,7 @@ public class FineService {
         return value.trim().toUpperCase().replaceAll("[^A-Z0-9]+", "_");
     }
 
-    private static boolean isBlank(String s) { return s == null || s.trim().isEmpty(); }
+    private static boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
+    }
 }

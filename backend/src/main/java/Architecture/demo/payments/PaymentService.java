@@ -13,13 +13,16 @@ import java.time.LocalDateTime;
 
 @Service
 public class PaymentService {
+
     private final FineRepository fineRepository;
     private final PaymentRepository paymentRepository;
     private final NotificationRepository notificationRepository;
     private final SmsService smsService;
 
-    public PaymentService(FineRepository fineRepository, PaymentRepository paymentRepository,
-                          NotificationRepository notificationRepository, SmsService smsService) {
+    public PaymentService(FineRepository fineRepository,
+                          PaymentRepository paymentRepository,
+                          NotificationRepository notificationRepository,
+                          SmsService smsService) {
         this.fineRepository = fineRepository;
         this.paymentRepository = paymentRepository;
         this.notificationRepository = notificationRepository;
@@ -45,14 +48,14 @@ public class PaymentService {
         fine.setPaidAt(LocalDateTime.now());
         fineRepository.save(fine);
 
-        String driverName = fine.getDriverName() != null ? fine.getDriverName()
-                : (fine.getDriver().getDisplayName() != null ? fine.getDriver().getDisplayName()
-                : fine.getDriver().getUsername());
+        String driverName = fine.getDriverName() != null
+                ? fine.getDriverName()
+                : (fine.getDriver().getDisplayName() != null ? fine.getDriver().getDisplayName() : fine.getDriver().getUsername());
 
         String message = String.format(
                 "Fine %s has been paid by %s (Rs. %.0f). You may return the driver's license.",
-                fine.getReferenceNumber(), driverName, fine.getAmount());
-
+                fine.getReferenceNumber(), driverName, fine.getAmount()
+        );
         Notification notification = new Notification();
         notification.setRecipient(fine.getOfficer());
         notification.setMessage(message);
@@ -63,7 +66,8 @@ public class PaymentService {
                 fine.getOfficer().getUsername(),
                 driverName,
                 fine.getReferenceNumber(),
-                fine.getAmount());
+                fine.getAmount()
+        );
 
         return payment;
     }
